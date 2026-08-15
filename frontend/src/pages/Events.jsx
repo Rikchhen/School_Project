@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import { CalendarDays, MapPin } from "lucide-react";
+import { CalendarDays, MapPin, Search } from "lucide-react";
+import { Link } from "../lib/router";
 import { useLang } from "../context/LanguageContext";
 import { useSocketEvent } from "../context/SocketContext";
 import { useToast } from "../context/ToastContext";
@@ -11,6 +12,8 @@ import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Skeleton, SkeletonCard } from "../components/ui/Skeleton";
 import { SmartImage } from "../components/SmartImage";
+import { EmptyState } from "../components/EmptyState";
+import { Reveal } from "../components/Reveal";
 import { htmlToText } from "../lib/sanitizeHtml";
 import { formatDate } from "../lib/format";
 
@@ -25,6 +28,13 @@ export function Events() {
   const toast = useToast();
   const [featured, setFeatured] = useState(null);
   const [news, setNews] = useState(null);
+  const [query, setQuery] = useState("");
+
+  const filteredNews = (news || []).filter((e) => {
+    if (!query.trim()) return true;
+    const hay = `${pickLang(e, "title")} ${htmlToText(pickLang(e, "description"))}`.toLowerCase();
+    return hay.includes(query.trim().toLowerCase());
+  });
 
   useEffect(() => {
     const ctrl = new AbortController();
@@ -51,11 +61,12 @@ export function Events() {
           {featured === null ? (
             <Grid $cols={3}>{[0, 1, 2].map((i) => <SkeletonCard key={i} />)}</Grid>
           ) : featured.length === 0 ? (
-            <Empty>{t("events.empty")}</Empty>
+            <EmptyState message={t("events.empty")} />
           ) : (
+            <Reveal>
             <Grid $cols={3}>
               {featured.map((e) => (
-                <FeatureCard key={e._id} $hover $pad={0}>
+                <FeatureCard as={Link} to={`/events/${e._id}`} key={e._id} $hover $pad={0}>
                   <Media>
                     <SmartImage src={e.imageUrl} alt={e.title} height="180px" />
                     <TagOverlay><Badge $tone={CATEGORY_TONE[e.category] || "neutral"}>{e.category}</Badge></TagOverlay>
@@ -69,21 +80,28 @@ export function Events() {
                 </FeatureCard>
               ))}
             </Grid>
+            </Reveal>
           )}
         </Container>
       </Section>
 
       <Section $bg="alt">
         <Container>
-          <Head><h2>{t("events.latestNews")}</h2></Head>
+          <NewsHead>
+            <h2>{t("events.latestNews")}</h2>
+            <SearchBox>
+              <Search size={16} />
+              <input value={query} onChange={(e) => setQuery(e.target.value)} placeholder={t("common.search")} aria-label={t("common.search")} />
+            </SearchBox>
+          </NewsHead>
           {news === null ? (
             <NewsList>{[0, 1, 2].map((i) => <Skeleton key={i} $h="96px" $radius="lg" />)}</NewsList>
-          ) : news.length === 0 ? (
-            <Empty>{t("events.empty")}</Empty>
+          ) : filteredNews.length === 0 ? (
+            <EmptyState message={t("events.empty")} />
           ) : (
-            <NewsList>
-              {news.map((e) => (
-                <NewsRow key={e._id}>
+            <NewsList as={Reveal} stagger={70}>
+              {filteredNews.map((e) => (
+                <NewsRow as={Link} to={`/events/${e._id}`} key={e._id}>
                   <NewsThumb><SmartImage src={e.imageUrl} alt={e.title} height="80px" /></NewsThumb>
                   <div>
                     <NewsMeta>
@@ -107,6 +125,21 @@ const Head = styled.div`
   display: flex; align-items: center; gap: 10px; margin-bottom: ${({ theme }) => theme.space[8]};
   svg { color: ${({ theme }) => theme.colors.primary}; }
   h2 { color: ${({ theme }) => theme.colors.text}; font-size: ${({ theme }) => theme.fontSizes["3xl"]}; }
+`;
+const NewsHead = styled.div`
+  display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.space[4]};
+  margin-bottom: ${({ theme }) => theme.space[8]}; flex-wrap: wrap;
+  h2 { color: ${({ theme }) => theme.colors.text}; font-size: ${({ theme }) => theme.fontSizes["3xl"]}; }
+`;
+const SearchBox = styled.div`
+  display: flex; align-items: center; gap: 8px;
+  background: ${({ theme }) => theme.colors.surface};
+  border: 1px solid ${({ theme }) => theme.colors.border};
+  border-radius: ${({ theme }) => theme.radii.pill};
+  padding: ${({ theme }) => `${theme.space[2]} ${theme.space[4]}`};
+  color: ${({ theme }) => theme.colors.textMuted};
+  input { border: none; outline: none; background: none; width: 200px; font-size: ${({ theme }) => theme.fontSizes.sm}; color: ${({ theme }) => theme.colors.text}; }
+  ${({ theme }) => theme.media.mobile(`width: 100%; input { width: 100%; }`)}
 `;
 const FeatureCard = styled(Card)`overflow: hidden; display: flex; flex-direction: column;`;
 const Media = styled.div`position: relative;`;

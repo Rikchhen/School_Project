@@ -16,17 +16,22 @@ export const GlobalStyle = createGlobalStyle`
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     min-height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
   }
 
   h1, h2, h3, h4, h5 {
     font-family: ${({ theme }) => theme.fonts.heading};
     font-weight: ${({ theme }) => theme.fontWeights.bold};
     line-height: ${({ theme }) => theme.lineHeights.tight};
+    letter-spacing: -0.01em; /* tightens the serif display for a polished look */
     color: ${({ theme }) => theme.colors.text};
   }
+  /* Nepali headings: serif tracking doesn't suit Devanagari — reset it */
+  h1[lang="ne"], h2[lang="ne"], h3[lang="ne"], h4[lang="ne"], h5[lang="ne"] { letter-spacing: normal; }
 
-  /* Nepali text (marked with lang="ne") uses the Devanagari stack */
-  [lang="ne"] { font-family: ${({ theme }) => theme.fonts.nepali}; }
+  /* Nepali text (marked with lang="ne") uses the Devanagari stack with a
+     slightly taller line-height so the script breathes */
+  [lang="ne"] { font-family: ${({ theme }) => theme.fonts.nepali}; line-height: 1.75; }
 
   a { color: inherit; text-decoration: none; }
 
@@ -57,6 +62,24 @@ export const GlobalStyle = createGlobalStyle`
 
   /* Thin, on-brand scrollbar */
   ::selection { background: ${({ theme }) => theme.colors.primary}; color: #fff; }
+
+  /* Skip-to-content link — visible only when focused */
+  .skip-link {
+    position: fixed; top: 8px; left: 8px; z-index: ${({ theme }) => theme.zIndex.toast + 1};
+    background: ${({ theme }) => theme.colors.primary}; color: #fff;
+    padding: 10px 16px; border-radius: ${({ theme }) => theme.radii.md};
+    font-weight: 600; transform: translateY(-150%); transition: transform 0.2s ease;
+  }
+  .skip-link:focus { transform: translateY(0); }
+
+  /* Print: show only the content, dark text on white, no chrome */
+  @media print {
+    header, footer, .no-print { display: none !important; }
+    body { background: #fff; color: #000; }
+    a { color: #000; text-decoration: none; }
+    main { padding: 0 !important; }
+    * { box-shadow: none !important; }
+  }
 `;
 
 export default GlobalStyle;

@@ -6,7 +6,10 @@ import { PageHero } from "../components/PageHero";
 import { Container, Section } from "../components/ui/Layout";
 import { Skeleton } from "../components/ui/Skeleton";
 import { SmartImage } from "../components/SmartImage";
+import { FetchError } from "../components/FetchError";
+import { EmptyState } from "../components/EmptyState";
 import { Lightbox } from "../components/Lightbox";
+import { Reveal } from "../components/Reveal";
 
 const ALBUMS = ["all", "campus", "events", "sports", "academics", "cultural", "general"];
 
@@ -14,7 +17,7 @@ export function Gallery() {
   const { t } = useLang();
   const [album, setAlbum] = useState("all");
   const [active, setActive] = useState(null);
-  const { data, loading } = useFetch("/gallery?published=true&limit=100");
+  const { data, loading, error, refetch } = useFetch("/gallery?published=true&limit=100");
   const all = data?.items || [];
   const items = album === "all" ? all : all.filter((g) => g.album === album);
 
@@ -29,12 +32,14 @@ export function Gallery() {
             ))}
           </Filters>
 
-          {loading ? (
+          {error ? (
+            <FetchError onRetry={refetch} />
+          ) : loading ? (
             <Masonry>{[...Array(8)].map((_, i) => <Skeleton key={i} $h="200px" $radius="lg" />)}</Masonry>
           ) : items.length === 0 ? (
-            <Empty>{t("gallery.empty")}</Empty>
+            <EmptyState message={t("gallery.empty")} />
           ) : (
-            <Masonry>
+            <Masonry as={Reveal} stagger={50}>
               {items.map((g, i) => (
                 <Tile key={g._id} onClick={() => setActive(i)} aria-label={`Open ${g.title}`}>
                   <SmartImage src={g.imageUrl} alt={g.title} height="200px" />

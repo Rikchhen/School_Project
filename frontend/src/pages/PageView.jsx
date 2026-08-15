@@ -9,6 +9,7 @@ import { Button } from "../components/ui/Button";
 import { Skeleton } from "../components/ui/Skeleton";
 import { RichText } from "../components/RichText";
 import { SmartImage } from "../components/SmartImage";
+import { Reveal } from "../components/Reveal";
 
 /**
  * Generic renderer for any admin-created page, reachable at /page/<slug>.
@@ -54,7 +55,7 @@ export function PageView({ slug }) {
     <>
       <PageHero title={pickLang(page, "title")} lang={lang} />
       <Section>
-        <Container $narrow>
+        <Container $narrow as={Reveal}>
           {page.content?.imageUrl && (
             <Banner><SmartImage src={page.content.imageUrl} alt={pickLang(page, "title")} height="320px" /></Banner>
           )}

@@ -9,9 +9,16 @@ import { PageHero } from "../components/PageHero";
 import { Container, Section } from "../components/ui/Layout";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Field, Label, Input, Textarea } from "../components/ui/Input";
+import { Field, Label, Input, Textarea, HelpText } from "../components/ui/Input";
+import { Reveal } from "../components/Reveal";
+import { validateFields, required, minLen, email } from "../lib/validate";
 
 const EMPTY = { name: "", email: "", phone: "", subject: "", message: "" };
+const RULES = {
+  name: [required("Name"), minLen(2, "Name")],
+  email: [required("Email"), email()],
+  message: [required("Message"), minLen(5, "Message")],
+};
 
 export function Contact() {
   const { t, pickLang } = useLang();
@@ -19,17 +26,26 @@ export function Contact() {
   const c = settings.contact || {};
   const toast = useToast();
   const [form, setForm] = useState(EMPTY);
+  const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const update = (k) => (e) => {
+    const value = e.target.value;
+    setForm((f) => ({ ...f, [k]: value }));
+    if (errors[k]) setErrors((prev) => ({ ...prev, [k]: undefined }));
+  };
+  const blur = (k) => () => setErrors((prev) => ({ ...prev, ...validateFields(form, { [k]: RULES[k] || [] }) }));
 
   const submit = async (e) => {
     e.preventDefault();
+    const found = validateFields(form, RULES);
+    if (Object.keys(found).length) { setErrors(found); return; }
     setSubmitting(true);
     try {
       const res = await api.post("/submissions/contact", form);
       toast.success(res.message || t("contact.success"));
       setForm(EMPTY);
+      setErrors({});
     } catch (err) {
       toast.error(err.message || "Submission failed");
     } finally {
@@ -50,7 +66,7 @@ export function Contact() {
       <Section $bg="alt">
         <Container>
           <Layout>
-            <InfoCol>
+            <Reveal direction="right"><InfoCol>
               <h2>{t("contact.infoTitle")}</h2>
               {info.map((it, i) => {
                 const Icon = it.icon;
@@ -61,21 +77,33 @@ export function Contact() {
                   </InfoRow>
                 );
               })}
-              <MapEmbed aria-hidden>
-                <MapPin size={22} /> {pickLang(c, "address") || t("contact.address")}
-              </MapEmbed>
-            </InfoCol>
+              {c.mapUrl ? (
+                <MapFrame
+                  src={c.mapUrl}
+                  title="School location map"
+                  loading="lazy"
+                  referrerPolicy="no-referrer-when-downgrade"
+                  allowFullScreen
+                />
+              ) : (
+                <MapEmbed aria-hidden>
+                  <MapPin size={22} /> {pickLang(c, "address") || t("contact.address")}
+                </MapEmbed>
+              )}
+            </InfoCol></Reveal>
 
-            <FormCard as="form" onSubmit={submit}>
+            <Reveal direction="left" delay={100}><FormCard as="form" onSubmit={submit}>
               <h3>{t("contact.formTitle")}</h3>
               <Row>
                 <Field>
                   <Label htmlFor="c-name">{t("contact.fName")} <span data-req>*</span></Label>
-                  <Input id="c-name" required minLength={2} value={form.name} onChange={update("name")} />
+                  <Input id="c-name" value={form.name} onChange={update("name")} onBlur={blur("name")} aria-invalid={!!errors.name} aria-describedby="c-name-err" />
+                  {errors.name && <HelpText id="c-name-err" $error>{errors.name}</HelpText>}
                 </Field>
                 <Field>
                   <Label htmlFor="c-email">{t("contact.fEmail")} <span data-req>*</span></Label>
-                  <Input id="c-email" type="email" required value={form.email} onChange={update("email")} />
+                  <Input id="c-email" type="email" value={form.email} onChange={update("email")} onBlur={blur("email")} aria-invalid={!!errors.email} aria-describedby="c-email-err" />
+                  {errors.email && <HelpText id="c-email-err" $error>{errors.email}</HelpText>}
                 </Field>
               </Row>
               <Row>
@@ -90,12 +118,13 @@ export function Contact() {
               </Row>
               <Field>
                 <Label htmlFor="c-msg">{t("contact.fMessage")} <span data-req>*</span></Label>
-                <Textarea id="c-msg" required minLength={5} value={form.message} onChange={update("message")} />
+                <Textarea id="c-msg" value={form.message} onChange={update("message")} onBlur={blur("message")} aria-invalid={!!errors.message} aria-describedby="c-msg-err" />
+                {errors.message && <HelpText id="c-msg-err" $error>{errors.message}</HelpText>}
               </Field>
               <Button type="submit" $variant="primary" $size="lg" disabled={submitting} $fullWidth>
                 <Send size={18} /> {submitting ? `${t("common.loading")}…` : t("common.send")}
               </Button>
-            </FormCard>
+            </FormCard></Reveal>
           </Layout>
         </Container>
       </Section>
@@ -116,6 +145,12 @@ const InfoRow = styled.div`
   span { width: 42px; height: 42px; flex-shrink: 0; display: grid; place-items: center; border-radius: ${({ theme }) => theme.radii.pill};
          background: ${({ theme }) => theme.colors.primarySoft}; color: ${({ theme }) => theme.colors.primary}; }
   p { color: ${({ theme }) => theme.colors.textBody}; }
+`;
+const MapFrame = styled.iframe`
+  width: 100%; min-height: 220px; border: 0;
+  margin-top: ${({ theme }) => theme.space[4]};
+  border-radius: ${({ theme }) => theme.radii.lg};
+  border: 1px solid ${({ theme }) => theme.colors.border};
 `;
 const MapEmbed = styled.div`
   margin-top: ${({ theme }) => theme.space[4]};

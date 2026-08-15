@@ -9,6 +9,8 @@ import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { SmartImage } from "../components/SmartImage";
+import { FetchError } from "../components/FetchError";
+import { Reveal } from "../components/Reveal";
 import { htmlToText } from "../lib/sanitizeHtml";
 
 const DEPTS = ["all", "administration", "science", "management", "humanities", "languages", "general"];
@@ -16,7 +18,7 @@ const DEPTS = ["all", "administration", "science", "management", "humanities", "
 export function Faculty() {
   const { t, pickLang } = useLang();
   const [dept, setDept] = useState("all");
-  const { data, loading } = useFetch("/staff?published=true");
+  const { data, loading, error, refetch } = useFetch("/staff?published=true");
   const staff = data?.items || [];
   const filtered = dept === "all" ? staff : staff.filter((s) => s.department === dept);
 
@@ -33,12 +35,14 @@ export function Faculty() {
             ))}
           </Filters>
 
-          {loading ? (
+          {error ? (
+            <FetchError onRetry={refetch} />
+          ) : loading ? (
             <Grid $cols={4}>{[0, 1, 2, 3].map((i) => <SkeletonCard key={i} />)}</Grid>
           ) : filtered.length === 0 ? (
             <Empty>{t("admin.noItems")}</Empty>
           ) : (
-            <Grid $cols={4}>
+            <Grid as={Reveal} stagger={70} $cols={4}>
               {filtered.map((m) => (
                 <StaffCard key={m._id} $hover $pad={0}>
                   <Photo><SmartImage src={m.photoUrl} alt={m.name} height="220px" /></Photo>

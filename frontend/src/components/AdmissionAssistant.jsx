@@ -63,7 +63,7 @@ export function AdmissionAssistant() {
           </Form>
         </Panel>
       )}
-      <Fab onClick={() => setOpen((o) => !o)} aria-label={t("assistant.title")} aria-expanded={open}>
+      <Fab className="no-print" onClick={() => setOpen((o) => !o)} aria-label={t("assistant.title")} aria-expanded={open}>
         {open ? <X size={22} /> : <MessageCircle size={22} />}
       </Fab>
     </>
@@ -79,6 +79,7 @@ const Fab = styled.button`
   display: grid; place-items: center; box-shadow: ${({ theme }) => theme.shadows.lg};
   transition: transform ${({ theme }) => theme.transitions.base}, background ${({ theme }) => theme.transitions.base};
   &:hover { transform: translateY(-2px); background: ${({ theme }) => theme.colors.primaryDark}; }
+  ${({ theme }) => theme.media.tablet(`display: none;`)} /* the mobile action bar covers this on phones */
 `;
 const Panel = styled.div`
   position: fixed; right: 20px; bottom: 88px; z-index: ${({ theme }) => theme.zIndex.toast - 1};

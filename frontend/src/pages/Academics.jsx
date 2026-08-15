@@ -9,6 +9,7 @@ import { Container, Section } from "../components/ui/Layout";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { Reveal } from "../components/Reveal";
 
 const PROGRAMS = [
   {
@@ -81,6 +82,7 @@ export function Academics() {
               </Tab>
             ))}
           </Tabs>
+          <Reveal>
           <ProgramGrid>
             {shown.map((p) => {
               const Icon = p.icon;
@@ -112,19 +114,22 @@ export function Academics() {
               );
             })}
           </ProgramGrid>
+          </Reveal>
         </Container>
       </Section>
 
       <Section>
         <Container>
-          <Cta>
-            <h2>{t("academics.ctaTitle")}</h2>
-            <p>{t("academics.ctaBody")}</p>
-            <CtaActions>
-              <Button as={Link} to="/admissions" $variant="secondary" $size="lg">{t("academics.ctaGuidelines")}</Button>
-              <Button as={Link} to="/contact" $variant="outline" $size="lg">{t("academics.ctaContact")}</Button>
-            </CtaActions>
-          </Cta>
+          <Reveal direction="scale">
+            <Cta>
+              <h2>{t("academics.ctaTitle")}</h2>
+              <p>{t("academics.ctaBody")}</p>
+              <CtaActions>
+                <Button as={Link} to="/admissions" $variant="secondary" $size="lg">{t("academics.ctaGuidelines")}</Button>
+                <Button as={Link} to="/contact" $variant="outline" $size="lg">{t("academics.ctaContact")}</Button>
+              </CtaActions>
+            </Cta>
+          </Reveal>
         </Container>
       </Section>
     </>

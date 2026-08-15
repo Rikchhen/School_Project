@@ -52,6 +52,8 @@ const sizes = {
 };
 
 export const Button = styled.button`
+  position: relative;
+  overflow: hidden;
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -63,15 +65,28 @@ export const Button = styled.button`
   border-radius: ${({ theme, $rounded }) => ($rounded === "md" ? theme.radii.md : theme.radii.pill)};
   transition: background ${({ theme }) => theme.transitions.base},
     transform ${({ theme }) => theme.transitions.base},
-    box-shadow ${({ theme }) => theme.transitions.base};
+    box-shadow ${({ theme }) => theme.transitions.base},
+    filter ${({ theme }) => theme.transitions.base};
   white-space: nowrap;
   width: ${({ $fullWidth }) => ($fullWidth ? "100%" : "auto")};
 
   ${({ $variant = "primary" }) => variants[$variant] || variants.primary}
   ${({ $size = "md" }) => sizes[$size] || sizes.md}
 
-  &:active:not(:disabled) { transform: translateY(1px); }
+  /* subtle lift + brighten on hover */
+  &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: ${({ theme }) => theme.shadows.lg}; }
+  &:active:not(:disabled) { transform: translateY(0); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
+
+  /* light sweep across the surface on hover */
+  &::after {
+    content: ""; position: absolute; top: 0; left: 0; width: 45%; height: 100%;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,0.35), transparent);
+    transform: translateX(-160%) skewX(-18deg); pointer-events: none;
+    transition: transform 0.6s ease;
+  }
+  &:hover:not(:disabled)::after { transform: translateX(300%) skewX(-18deg); }
+  @media (prefers-reduced-motion: reduce) { &::after { display: none; } }
 
   svg { flex-shrink: 0; }
 `;

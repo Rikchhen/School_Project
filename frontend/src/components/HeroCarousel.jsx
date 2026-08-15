@@ -1,20 +1,27 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import styled from "styled-components";
-import { ChevronLeft, ChevronRight, ArrowRight } from "lucide-react";
+import styled, { keyframes, css } from "styled-components";
+import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
+import { ChevronLeft, ChevronRight, ArrowRight, ChevronDown } from "lucide-react";
 import { Link } from "../lib/router";
 import { useLang } from "../context/LanguageContext";
 import { formatNumber } from "../lib/format";
 import { Container } from "./ui/Layout";
 import { Button } from "./ui/Button";
+import { auroraDrift, kenBurns, scrollCue } from "../styles/animations";
 import heroImg from "../assets/images/hero.png";
 
 /**
- * Auto-advancing hero banner carousel with a crossfade animation.
+ * Auto-advancing hero banner carousel.
+ * - Crossfade between slides (framer AnimatePresence).
+ * - Ken Burns zoom on the background photo + drifting aurora glow behind copy.
+ * - Headline / subtitle / CTA enter with a staggered spring.
+ * - Floating stat cards idle-float and animate in.
  * Slides come from admin Settings; falls back to a single default slide.
- * Pauses on hover/focus and respects prefers-reduced-motion (no auto-advance).
+ * Pauses on hover/focus and respects prefers-reduced-motion.
  */
 export function HeroCarousel({ slides = [], stats = [] }) {
   const { pickLang, t, lang } = useLang();
+  const reduce = useReducedMotion();
   const heroStats = (stats.length
     ? stats
     : [
@@ -26,19 +33,30 @@ export function HeroCarousel({ slides = [], stats = [] }) {
   const list = slides.length ? slides : [null]; // null => default slide
   const [index, setIndex] = useState(0);
   const [paused, setPaused] = useState(false);
-  const reduced = useRef(false);
-
-  useEffect(() => {
-    reduced.current = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches ?? false;
-  }, []);
 
   const go = useCallback((n) => setIndex((prev) => (n + list.length) % list.length), [list.length]);
 
   useEffect(() => {
-    if (paused || reduced.current || list.length < 2) return;
+    if (paused || reduce || list.length < 2) return;
     const id = setInterval(() => setIndex((p) => (p + 1) % list.length), 6000);
     return () => clearInterval(id);
-  }, [paused, list.length]);
+  }, [paused, reduce, list.length]);
+
+  const slide = list[index];
+  const title = slide ? pickLang(slide, "title") : t("home.heroTitle");
+  const subtitle = slide ? pickLang(slide, "subtitle") : t("home.heroSubtitle");
+  const ctaLabel = slide ? pickLang(slide, "ctaLabel") : t("home.ctaAdmissions");
+  const ctaLink = slide?.ctaLink || "/admissions";
+
+  // Stagger for the headline block.
+  const container = {
+    hidden: {},
+    show: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } },
+  };
+  const item = {
+    hidden: { opacity: 0, y: 24 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 90, damping: 16 } },
+  };
 
   return (
     <Hero
@@ -48,48 +66,75 @@ export function HeroCarousel({ slides = [], stats = [] }) {
       onBlurCapture={() => setPaused(false)}
       aria-roledescription="carousel"
     >
-      {list.map((slide, i) => {
-        const title = slide ? pickLang(slide, "title") : t("home.heroTitle");
-        const subtitle = slide ? pickLang(slide, "subtitle") : t("home.heroSubtitle");
-        const ctaLabel = slide ? pickLang(slide, "ctaLabel") : t("home.ctaAdmissions");
-        const ctaLink = slide?.ctaLink || "/admissions";
-        return (
-          <Slide key={i} $active={i === index} aria-hidden={i !== index}>
-            {slide?.videoUrl ? (
-              <BgVideo src={slide.videoUrl} autoPlay muted loop playsInline />
-            ) : (
-              <Bg src={slide?.imageUrl || heroImg} alt="" onError={(e) => { e.currentTarget.src = heroImg; }} />
-            )}
-            <Fade />
-            <Container>
-              <Inner>
-                <h1>{title}</h1>
-                {subtitle && <p>{subtitle}</p>}
-                {ctaLabel && (
-                  <Button as={Link} to={ctaLink} $variant="primary" $size="lg">
-                    {ctaLabel} <ArrowRight size={18} />
-                  </Button>
-                )}
-              </Inner>
-            </Container>
-          </Slide>
-        );
-      })}
+      {/* Ambient aurora glow — subtle, pushed to the corners so the photo stays crisp */}
+      <Aurora aria-hidden>
+        <Blob $c="primary" style={{ top: "-22%", left: "-14%" }} />
+        <Blob $c="secondary" style={{ bottom: "-30%", right: "-12%" }} />
+      </Aurora>
+
+      {/* Background media crossfade */}
+      <AnimatePresence initial={false} mode="popLayout">
+        <BgLayer
+          key={index}
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: 0.9, ease: "easeInOut" }}
+          aria-hidden
+        >
+          {slide?.videoUrl ? (
+            <BgVideo src={slide.videoUrl} autoPlay muted loop playsInline />
+          ) : (
+            <Bg $ken={!reduce} src={slide?.imageUrl || heroImg} alt="" onError={(e) => { e.currentTarget.src = heroImg; }} />
+          )}
+        </BgLayer>
+      </AnimatePresence>
+      <Fade />
+
+      {/* Copy (re-runs stagger on slide change via keyed motion element) */}
+      <Container>
+        <Inner as={motion.div} key={`copy-${index}`} variants={container} initial="hidden" animate="show">
+          <motion.h1 variants={item}>{title}</motion.h1>
+          {subtitle && <motion.p variants={item}>{subtitle}</motion.p>}
+          {ctaLabel && (
+            <motion.div variants={item} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} style={{ alignSelf: "flex-start" }}>
+              <CtaButton as={Link} to={ctaLink} $variant="primary" $size="lg">
+                {ctaLabel} <ArrowRight size={18} />
+              </CtaButton>
+            </motion.div>
+          )}
+        </Inner>
+      </Container>
 
       {/* Floating stat cards */}
       <HeroStats aria-hidden>
         {heroStats.map((s, i) => (
-          <StatCard key={i}>
+          <StatCard
+            key={i}
+            initial={{ opacity: 0, x: 40, scale: 0.9 }}
+            animate={{ opacity: 1, x: 0, scale: 1 }}
+            transition={{ delay: 0.5 + i * 0.14, type: "spring", stiffness: 120, damping: 15 }}
+            whileHover={{ y: -6, scale: 1.04 }}
+            $float={!reduce}
+            style={{ animationDelay: `${i * 0.6}s` }}
+          >
             <strong>{formatNumber(Number(s.value) || 0, lang)}{s.suffix}</strong>
             <span>{pickLang(s, "label")}</span>
           </StatCard>
         ))}
       </HeroStats>
 
+      {/* Scroll cue (only when no dots occupy the bottom-centre) */}
+      {list.length === 1 && (
+        <ScrollCue aria-hidden $show={!reduce}>
+          <ChevronDown size={22} />
+        </ScrollCue>
+      )}
+
       {list.length > 1 && (
         <>
-          <Arrow $side="left" onClick={() => go(index - 1)} aria-label="Previous slide"><ChevronLeft size={24} /></Arrow>
-          <Arrow $side="right" onClick={() => go(index + 1)} aria-label="Next slide"><ChevronRight size={24} /></Arrow>
+          <Arrow as={motion.button} $side="left" onClick={() => go(index - 1)} aria-label="Previous slide" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}><ChevronLeft size={24} /></Arrow>
+          <Arrow as={motion.button} $side="right" onClick={() => go(index + 1)} aria-label="Next slide" whileHover={{ scale: 1.1 }} whileTap={{ scale: 0.92 }}><ChevronRight size={24} /></Arrow>
           <Dots role="tablist">
             {list.map((_, i) => (
               <Dot key={i} $active={i === index} onClick={() => setIndex(i)} aria-label={`Go to slide ${i + 1}`} aria-selected={i === index} />
@@ -103,76 +148,100 @@ export function HeroCarousel({ slides = [], stats = [] }) {
 
 const Hero = styled.section`
   position: relative;
-  height: 520px;
+  height: 560px;
   overflow: hidden;
   background: ${({ theme }) => theme.colors.bg};
-  ${({ theme }) => theme.media.tablet(`height: 460px;`)}
+  ${({ theme }) => theme.media.tablet(`height: 480px;`)}
 `;
-const Slide = styled.div`
-  position: absolute; inset: 0;
-  display: flex; align-items: center;
-  opacity: ${({ $active }) => ($active ? 1 : 0)};
-  transition: opacity 0.8s ease;
-  pointer-events: ${({ $active }) => ($active ? "auto" : "none")};
+
+/* ----- Ambient aurora ----- */
+const Aurora = styled.div`position: absolute; inset: 0; overflow: hidden; z-index: 0;`;
+const Blob = styled.div`
+  position: absolute; width: 34vw; height: 34vw; max-width: 440px; max-height: 440px;
+  border-radius: 50%; filter: blur(90px);
+  opacity: ${({ theme }) => (theme.mode === "dark" ? 0.28 : 0.2)};
+  background: ${({ theme, $c }) => theme.colors[$c]};
+  animation: ${auroraDrift} 20s ease-in-out infinite;
+  will-change: transform;
+  &:nth-child(2) { animation-duration: 26s; animation-direction: reverse; }
 `;
+
+const BgLayer = styled(motion.div)`position: absolute; inset: 0; z-index: 0;`;
 const Bg = styled.img`
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.4;
+  ${({ $ken }) => $ken && css`animation: ${kenBurns} 24s ease-in-out infinite;`}
+  will-change: transform;
 `;
 const BgVideo = styled.video`
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.45;
 `;
 const Fade = styled.div`
-  position: absolute; inset: 0;
+  position: absolute; inset: 0; z-index: 1;
   background: ${({ theme }) => theme.gradients.heroFade};
 `;
 const Inner = styled.div`
-  position: relative; max-width: 620px;
+  position: relative; z-index: 2; max-width: 640px;
   display: flex; flex-direction: column; gap: ${({ theme }) => theme.space[4]};
   h1 {
     font-size: ${({ theme }) => theme.fontSizes["5xl"]};
-    color: ${({ theme }) => theme.colors.primary};
+    background: ${({ theme }) => theme.gradients.primary};
+    -webkit-background-clip: text; background-clip: text; color: transparent;
+    -webkit-text-fill-color: transparent;
     line-height: ${({ theme }) => theme.lineHeights.tight};
-    ${({ theme }) => theme.media.tablet(`font-size: 2.25rem;`)}
+    ${({ theme }) => theme.media.tablet(`font-size: 2.35rem;`)}
   }
   p { color: ${({ theme }) => theme.colors.textBody}; font-size: ${({ theme }) => theme.fontSizes.lg}; max-width: 48ch; }
-  a { align-self: flex-start; margin-top: ${({ theme }) => theme.space[2]}; }
 `;
+const CtaButton = styled(Button)`
+  margin-top: ${({ theme }) => theme.space[2]};
+`;
+
 const HeroStats = styled.div`
   position: absolute; right: 76px; top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; gap: ${({ theme }) => theme.space[3]}; z-index: 3;
   ${({ theme }) => theme.media.desktop(`right: 20px;`)}
   ${({ theme }) => theme.media.laptop(`display: none;`)}
 `;
-const StatCard = styled.div`
-  background: rgba(255,255,255,0.9);
-  backdrop-filter: blur(6px);
+const idleFloat = keyframes`0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}`;
+const StatCard = styled(motion.div)`
+  background: ${({ theme }) => (theme.mode === "dark" ? "rgba(24,31,41,0.82)" : "rgba(255,255,255,0.85)")};
+  backdrop-filter: blur(8px) saturate(140%);
+  -webkit-backdrop-filter: blur(8px) saturate(140%);
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-left: 4px solid ${({ theme }) => theme.colors.primary};
   border-radius: ${({ theme }) => theme.radii.lg};
   box-shadow: ${({ theme }) => theme.shadows.lg};
   padding: ${({ theme }) => `${theme.space[3]} ${theme.space[5]}`};
   min-width: 150px;
+  ${({ $float }) => $float && css`animation: ${idleFloat} 4.5s ease-in-out infinite;`}
   strong {
     display: block; font-family: ${({ theme }) => theme.fonts.heading};
     font-size: ${({ theme }) => theme.fontSizes["3xl"]}; color: ${({ theme }) => theme.colors.primary}; line-height: 1;
   }
   span { color: ${({ theme }) => theme.colors.textBody}; font-size: ${({ theme }) => theme.fontSizes.sm}; font-weight: 600; }
 `;
+
+const ScrollCue = styled.div`
+  position: absolute; bottom: 16px; left: 50%; transform: translateX(-50%); z-index: 3;
+  color: ${({ theme }) => theme.colors.primary}; opacity: 0.85;
+  ${({ $show }) => $show && css`animation: ${scrollCue} 1.8s ease-in-out infinite;`}
+  ${({ theme }) => theme.media.tablet(`display: none;`)}
+`;
+
 const Arrow = styled.button`
-  position: absolute; top: 50%; transform: translateY(-50%);
+  position: absolute; top: 50%; transform: translateY(-50%); z-index: 4;
   ${({ $side }) => ($side === "left" ? "left: 16px;" : "right: 16px;")}
   width: 44px; height: 44px; display: grid; place-items: center;
   border-radius: ${({ theme }) => theme.radii.pill};
   background: ${({ theme }) => theme.colors.surface};
   color: ${({ theme }) => theme.colors.primary};
   box-shadow: ${({ theme }) => theme.shadows.md};
-  z-index: 2;
   &:hover { background: ${({ theme }) => theme.colors.primary}; color: #fff; }
   ${({ theme }) => theme.media.mobile(`display: none;`)}
 `;
 const Dots = styled.div`
   position: absolute; bottom: 18px; left: 50%; transform: translateX(-50%);
-  display: flex; gap: 8px; z-index: 2;
+  display: flex; gap: 8px; z-index: 4;
 `;
 const Dot = styled.button`
   width: ${({ $active }) => ($active ? "26px" : "10px")}; height: 10px;

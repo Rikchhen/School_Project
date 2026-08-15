@@ -41,16 +41,14 @@ function adToBs(adDate) {
   if (days < 0) return null;
   let year = BS_START_YEAR;
   let month = 1;
-  while (true) {
-    const yearData = BS_CALENDAR[year];
-    if (!yearData) return null;
-    const dim = yearData[month - 1];
-    if (days < dim) break;
+  while (BS_CALENDAR[year]) {
+    const dim = BS_CALENDAR[year][month - 1];
+    if (days < dim) return { year, month, day: days + 1 };
     days -= dim;
     month += 1;
     if (month > 12) { month = 1; year += 1; }
   }
-  return { year, month, day: days + 1 };
+  return null; // out of table range
 }
 
 export function toNepaliNumerals(input) {

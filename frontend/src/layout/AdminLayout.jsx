@@ -5,6 +5,7 @@ import {
   FileText, Inbox, LogOut, Menu, X, ExternalLink, Settings as SettingsIcon, HandCoins,
 } from "lucide-react";
 import { Link, useRouter } from "../lib/router";
+import { ThemeToggle } from "../components/ThemeToggle";
 import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LanguageContext";
 import { useToast } from "../context/ToastContext";
@@ -68,7 +69,10 @@ export function AdminLayout({ children }) {
           <Burger onClick={() => setOpen((o) => !o)} aria-label="Toggle menu">
             {open ? <X size={20} /> : <Menu size={20} />}
           </Burger>
-          <Who>{admin?.name || admin?.email}</Who>
+          <TopActions>
+            <ThemeToggle variant="surface" />
+            <Who>{admin?.name || admin?.email}</Who>
+          </TopActions>
         </Topbar>
         <Inner>{children}</Inner>
       </Content>
@@ -189,8 +193,10 @@ const Burger = styled.button`
   ${({ theme }) => theme.media.laptop(`display: inline-flex;`)}
 `;
 
+const TopActions = styled.div`
+  margin-left: auto; display: flex; align-items: center; gap: ${({ theme }) => theme.space[4]};
+`;
 const Who = styled.span`
-  margin-left: auto;
   font-size: ${({ theme }) => theme.fontSizes.sm};
   color: ${({ theme }) => theme.colors.textMuted};
   font-weight: 600;

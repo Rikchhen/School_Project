@@ -24,10 +24,14 @@ const Img = styled.img`
   object-fit: ${({ $fit }) => $fit || "cover"};
   display: block;
   background: ${({ theme }) => theme.colors.surfaceAlt};
+  opacity: ${({ $loaded }) => ($loaded ? 1 : 0)};
+  transition: opacity 0.45s ease;
+  @media (prefers-reduced-motion: reduce) { transition: none; opacity: 1; }
 `;
 
 export function SmartImage({ src, alt = "", height, fit, ...rest }) {
   const [errored, setErrored] = useState(false);
+  const [loaded, setLoaded] = useState(false);
   const finalSrc = !src || errored ? PLACEHOLDER : src;
   return (
     <Img
@@ -35,8 +39,11 @@ export function SmartImage({ src, alt = "", height, fit, ...rest }) {
       alt={alt}
       $height={height}
       $fit={fit}
+      $loaded={loaded || errored}
       loading="lazy"
-      onError={() => setErrored(true)}
+      decoding="async"
+      onLoad={() => setLoaded(true)}
+      onError={() => { setErrored(true); setLoaded(true); }}
       {...rest}
     />
   );

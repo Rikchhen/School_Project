@@ -1,7 +1,8 @@
-import { useEffect } from "react";
+import { useEffect, lazy, Suspense } from "react";
 import styled from "styled-components";
 import { useRouter } from "./lib/router";
 import { useAuth } from "./context/AuthContext";
+import { applyRouteMeta } from "./lib/seo";
 import { PublicLayout } from "./layout/PublicLayout";
 import { AdminLayout } from "./layout/AdminLayout";
 
@@ -18,21 +19,23 @@ import { Contact } from "./pages/Contact";
 import { Committee } from "./pages/Committee";
 import { Donation } from "./pages/Donation";
 import { PageView } from "./pages/PageView";
+import { NoticeDetail } from "./pages/NoticeDetail";
+import { EventDetail } from "./pages/EventDetail";
 import { NotFound } from "./pages/NotFound";
 
-// Admin pages
-import { AdminLogin } from "./pages/admin/Login";
-import { AdminDashboard } from "./pages/admin/Dashboard";
-import { ManageNotices } from "./pages/admin/ManageNotices";
-import { ManageEvents } from "./pages/admin/ManageEvents";
-import { ManageGallery } from "./pages/admin/ManageGallery";
-import { ManageStaff } from "./pages/admin/ManageStaff";
-import { ManageCommittee } from "./pages/admin/ManageCommittee";
-import { ManagePrograms } from "./pages/admin/ManagePrograms";
-import { ManagePages } from "./pages/admin/ManagePages";
-import { ManageDonation } from "./pages/admin/ManageDonation";
-import { ManageSettings } from "./pages/admin/ManageSettings";
-import { Inbox } from "./pages/admin/Inbox";
+// Admin pages — lazy-loaded so the public bundle stays lean.
+const AdminLogin = lazy(() => import("./pages/admin/Login").then((m) => ({ default: m.AdminLogin })));
+const AdminDashboard = lazy(() => import("./pages/admin/Dashboard").then((m) => ({ default: m.AdminDashboard })));
+const ManageNotices = lazy(() => import("./pages/admin/ManageNotices").then((m) => ({ default: m.ManageNotices })));
+const ManageEvents = lazy(() => import("./pages/admin/ManageEvents").then((m) => ({ default: m.ManageEvents })));
+const ManageGallery = lazy(() => import("./pages/admin/ManageGallery").then((m) => ({ default: m.ManageGallery })));
+const ManageStaff = lazy(() => import("./pages/admin/ManageStaff").then((m) => ({ default: m.ManageStaff })));
+const ManageCommittee = lazy(() => import("./pages/admin/ManageCommittee").then((m) => ({ default: m.ManageCommittee })));
+const ManagePrograms = lazy(() => import("./pages/admin/ManagePrograms").then((m) => ({ default: m.ManagePrograms })));
+const ManagePages = lazy(() => import("./pages/admin/ManagePages").then((m) => ({ default: m.ManagePages })));
+const ManageDonation = lazy(() => import("./pages/admin/ManageDonation").then((m) => ({ default: m.ManageDonation })));
+const ManageSettings = lazy(() => import("./pages/admin/ManageSettings").then((m) => ({ default: m.ManageSettings })));
+const Inbox = lazy(() => import("./pages/admin/Inbox").then((m) => ({ default: m.Inbox })));
 
 const PUBLIC_ROUTES = {
   "/": Home,
@@ -65,6 +68,9 @@ const ADMIN_ROUTES = {
 export default function App() {
   const { path } = useRouter();
 
+  // Update document title + meta/OG tags on every navigation.
+  useEffect(() => { applyRouteMeta(path); }, [path]);
+
   if (path.startsWith("/admin")) return <AdminArea path={path} />;
 
   // Generic viewer for any admin-created page: /page/<slug>
@@ -75,6 +81,16 @@ export default function App() {
         <PageView slug={slug} />
       </PublicLayout>
     );
+  }
+
+  // Detail pages: /notices/:id and /events/:id
+  if (path.startsWith("/notices/")) {
+    const id = decodeURIComponent(path.slice("/notices/".length));
+    return <PublicLayout><NoticeDetail id={id} /></PublicLayout>;
+  }
+  if (path.startsWith("/events/")) {
+    const id = decodeURIComponent(path.slice("/events/".length));
+    return <PublicLayout><EventDetail id={id} /></PublicLayout>;
   }
 
   const Page = PUBLIC_ROUTES[path] || NotFound;
@@ -98,7 +114,13 @@ function AdminArea({ path }) {
   }, [isLoginRoute, loading, isAuthenticated, navigate]);
 
   // Login screen is outside the protected shell.
-  if (isLoginRoute) return <AdminLogin />;
+  if (isLoginRoute) {
+    return (
+      <Suspense fallback={<Splash>Loading…</Splash>}>
+        <AdminLogin />
+      </Suspense>
+    );
+  }
 
   if (loading) {
     return <Splash>Loading dashboard…</Splash>;
@@ -110,7 +132,9 @@ function AdminArea({ path }) {
   const Page = ADMIN_ROUTES[path] || NotFound;
   return (
     <AdminLayout>
-      <Page />
+      <Suspense fallback={<Splash>Loading…</Splash>}>
+        <Page />
+      </Suspense>
     </AdminLayout>
   );
 }

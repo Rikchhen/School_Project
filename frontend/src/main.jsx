@@ -1,10 +1,10 @@
 import React from "react";
 import ReactDOM from "react-dom/client";
-import { ThemeProvider } from "styled-components";
-import { theme } from "./styles/theme";
+import { MotionConfig } from "framer-motion";
 import { GlobalStyle } from "./styles/GlobalStyle";
 import { ErrorBoundary } from "./components/ErrorBoundary";
 import { RouterProvider } from "./lib/router";
+import { ThemeModeProvider } from "./context/ThemeModeContext";
 import { LanguageProvider } from "./context/LanguageContext";
 import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
@@ -14,8 +14,9 @@ import App from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
   <React.StrictMode>
-    <ThemeProvider theme={theme}>
+    <ThemeModeProvider>
       <GlobalStyle />
+      <MotionConfig reducedMotion="user">
       <ErrorBoundary>
         <LanguageProvider>
           <ToastProvider>
@@ -31,6 +32,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
           </ToastProvider>
         </LanguageProvider>
       </ErrorBoundary>
-    </ThemeProvider>
+      </MotionConfig>
+    </ThemeModeProvider>
   </React.StrictMode>
 );

@@ -1,0 +1,16 @@
+{
+  "name": "Adarsha Rastriya Secondary School",
+  "short_name": "Adarsha School",
+  "description": "Nurturing excellence, fostering tradition, and building the leaders of tomorrow.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#f8f9fa",
+  "theme_color": "#b1002c",
+  "icons": [
+    { "src": "/logo.png", "sizes": "96x96", "type": "image/png", "purpose": "any" },
+    { "src": "/logo.png", "sizes": "192x192", "type": "image/png", "purpose": "any maskable" },
+    { "src": "/logo.png", "sizes": "512x512", "type": "image/png", "purpose": "any" }
+  ]
+}

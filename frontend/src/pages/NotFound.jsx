@@ -2,11 +2,12 @@ import styled from "styled-components";
 import { Link } from "../lib/router";
 import { useLang } from "../context/LanguageContext";
 import { Button } from "../components/ui/Button";
+import { Reveal } from "../components/Reveal";
 
 export function NotFound() {
   const { t } = useLang();
   return (
-    <Wrap>
+    <Wrap as={Reveal} stagger={90}>
       <h1>404</h1>
       <p>The page you're looking for doesn't exist.</p>
       <Button as={Link} to="/" $variant="primary" $size="lg">{t("common.backHome")}</Button>

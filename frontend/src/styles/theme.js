@@ -57,10 +57,12 @@ const gradients = {
 };
 
 const fonts = {
-  heading: `'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif`,
-  body: `'Inter', 'Segoe UI', system-ui, sans-serif`,
+  // Scholarly serif for headings (academic/institutional feel).
+  heading: `'Crimson Pro', Georgia, 'Times New Roman', serif`,
+  // Atkinson Hyperlegible — engineered for maximum legibility/accessibility.
+  body: `'Atkinson Hyperlegible', 'Inter', 'Segoe UI', system-ui, sans-serif`,
   // Devanagari for Nepali text — stacked after Latin fonts.
-  nepali: `'Noto Sans Devanagari', 'Inter', system-ui, sans-serif`,
+  nepali: `'Noto Sans Devanagari', 'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif`,
 };
 
 const fontSizes = {
@@ -177,5 +179,72 @@ export const theme = {
   transitions,
   zIndex,
 };
+
+/**
+ * Dark palette. Brand identity is preserved — the crimson is only lifted for
+ * legibility on dark surfaces; blue backgrounds (footer/bands) keep their tone.
+ * Light mode is unchanged.
+ */
+const darkColors = {
+  primary: "#ef4d6b", // lifted crimson, readable on dark
+  primaryDark: "#c81e3f",
+  primaryLight: "#ff6b86",
+  primarySoft: "rgba(239,77,107,0.16)",
+
+  secondary: "#5b7fd0", // lifted blue for accents/links
+  secondaryDark: "#274a99",
+  secondaryLight: "#7f9ee0",
+  secondarySoft: "rgba(91,127,208,0.18)",
+  secondaryFaint: "#9db4ee",
+
+  bg: "#0f141b",
+  surface: "#181f29",
+  surfaceAlt: "#212a36",
+
+  text: "#e9edf2",
+  textBody: "#c7cfda",
+  textMuted: "#9aa4b3", /* lightened for AA contrast on dark surfaces */
+  navInactive: "#c7cfda",
+  textOnDark: "#ffffff",
+  textOnDarkMuted: "rgba(255,255,255,0.8)",
+
+  border: "#2b3543",
+  borderStrong: "#3c4757",
+  success: "#3ddc84",
+  successSoft: "rgba(61,220,132,0.16)",
+  warning: "#f2b950",
+  warningSoft: "rgba(242,185,80,0.16)",
+  danger: "#ef4d6b",
+  dangerSoft: "rgba(239,77,107,0.16)",
+  info: "#5b7fd0",
+  infoSoft: "rgba(91,127,208,0.16)",
+
+  overlay: "rgba(0,0,0,0.7)",
+};
+
+// Bands (footer/stats/topbar) stay a deep brand blue in dark so white text reads.
+const darkGradients = {
+  ...gradients,
+  heroFade:
+    "linear-gradient(90deg, #0f141b 0%, rgba(15,20,27,0.85) 35%, rgba(15,20,27,0) 100%)",
+  secondary: "linear-gradient(135deg, #1f3566 0%, #274a99 100%)",
+};
+
+const darkShadows = {
+  xs: "0 1px 1px rgba(0,0,0,0.4)",
+  sm: "0 1px 3px rgba(0,0,0,0.5)",
+  md: "0 4px 6px -1px rgba(0,0,0,0.5), 0 2px 4px -2px rgba(0,0,0,0.5)",
+  lg: "0 10px 15px -3px rgba(0,0,0,0.55), 0 4px 6px -4px rgba(0,0,0,0.55)",
+  xl: "0 20px 25px -5px rgba(0,0,0,0.6), 0 8px 10px -6px rgba(0,0,0,0.6)",
+  focus: "0 0 0 3px rgba(127,158,224,0.45)",
+};
+
+/** Return the full theme for the given mode ("light" | "dark"). */
+export function getTheme(mode) {
+  if (mode === "dark") {
+    return { ...theme, mode: "dark", colors: darkColors, gradients: darkGradients, shadows: darkShadows };
+  }
+  return { ...theme, mode: "light" };
+}
 
 export default theme;

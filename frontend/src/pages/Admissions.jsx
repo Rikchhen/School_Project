@@ -8,26 +8,42 @@ import { PageHero } from "../components/PageHero";
 import { Container, Section } from "../components/ui/Layout";
 import { Card } from "../components/ui/Card";
 import { Button } from "../components/ui/Button";
-import { Field, Label, Input, Textarea } from "../components/ui/Input";
+import { Field, Label, Input, Textarea, HelpText } from "../components/ui/Input";
+import { Reveal } from "../components/Reveal";
+import { validateFields, required, minLen, email } from "../lib/validate";
 
 const EMPTY = { name: "", email: "", phone: "", studentName: "", gradeApplyingFor: "", message: "" };
+const RULES = {
+  name: [required("Name"), minLen(2, "Name")],
+  email: [required("Email"), email()],
+  message: [required("Message"), minLen(5, "Message")],
+};
 
 export function Admissions() {
   const { t } = useLang();
   const toast = useToast();
   const [form, setForm] = useState(EMPTY);
+  const [errors, setErrors] = useState({});
   const [submitting, setSubmitting] = useState(false);
   const [done, setDone] = useState(false);
 
-  const update = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+  const update = (k) => (e) => {
+    const value = e.target.value;
+    setForm((f) => ({ ...f, [k]: value }));
+    if (errors[k]) setErrors((prev) => ({ ...prev, [k]: undefined }));
+  };
+  const blur = (k) => () => setErrors((prev) => ({ ...prev, ...validateFields(form, { [k]: RULES[k] || [] }) }));
 
   const submit = async (e) => {
     e.preventDefault();
+    const found = validateFields(form, RULES);
+    if (Object.keys(found).length) { setErrors(found); return; }
     setSubmitting(true);
     try {
       const res = await api.post("/submissions/admission", form);
       toast.success(res.message || t("admissions.success"));
       setForm(EMPTY);
+      setErrors({});
       setDone(true);
     } catch (err) {
       toast.error(err.message || "Submission failed");
@@ -49,7 +65,7 @@ export function Admissions() {
       <Section $bg="alt">
         <Container>
           <Layout>
-            <div>
+            <Reveal direction="right">
               <h2>{t("admissions.processTitle")}</h2>
               <Steps>
                 {steps.map((s, i) => {
@@ -62,19 +78,21 @@ export function Admissions() {
                   );
                 })}
               </Steps>
-            </div>
+            </Reveal>
 
-            <FormCard as="form" onSubmit={submit}>
+            <Reveal direction="left" delay={100}><FormCard as="form" onSubmit={submit}>
               <h3>{t("admissions.formTitle")}</h3>
               {done && <Success><CheckCircle2 size={18} /> {t("admissions.success")}</Success>}
               <Field>
                 <Label htmlFor="a-name">{t("admissions.fName")} <span data-req>*</span></Label>
-                <Input id="a-name" required minLength={2} value={form.name} onChange={update("name")} />
+                <Input id="a-name" value={form.name} onChange={update("name")} onBlur={blur("name")} aria-invalid={!!errors.name} aria-describedby="a-name-err" />
+                {errors.name && <HelpText id="a-name-err" $error>{errors.name}</HelpText>}
               </Field>
               <Row>
                 <Field>
                   <Label htmlFor="a-email">{t("admissions.fEmail")} <span data-req>*</span></Label>
-                  <Input id="a-email" type="email" required value={form.email} onChange={update("email")} />
+                  <Input id="a-email" type="email" value={form.email} onChange={update("email")} onBlur={blur("email")} aria-invalid={!!errors.email} aria-describedby="a-email-err" />
+                  {errors.email && <HelpText id="a-email-err" $error>{errors.email}</HelpText>}
                 </Field>
                 <Field>
                   <Label htmlFor="a-phone">{t("admissions.fPhone")}</Label>
@@ -93,12 +111,13 @@ export function Admissions() {
               </Row>
               <Field>
                 <Label htmlFor="a-msg">{t("admissions.fMessage")} <span data-req>*</span></Label>
-                <Textarea id="a-msg" required minLength={5} value={form.message} onChange={update("message")} />
+                <Textarea id="a-msg" value={form.message} onChange={update("message")} onBlur={blur("message")} aria-invalid={!!errors.message} aria-describedby="a-msg-err" />
+                {errors.message && <HelpText id="a-msg-err" $error>{errors.message}</HelpText>}
               </Field>
               <Button type="submit" $variant="primary" $size="lg" disabled={submitting} $fullWidth>
                 <Send size={18} /> {submitting ? `${t("common.loading")}…` : t("common.submit")}
               </Button>
-            </FormCard>
+            </FormCard></Reveal>
           </Layout>
         </Container>
       </Section>

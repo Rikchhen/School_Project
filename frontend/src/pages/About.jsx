@@ -8,6 +8,7 @@ import { Container, Section, Grid } from "../components/ui/Layout";
 import { Card } from "../components/ui/Card";
 import { SmartImage } from "../components/SmartImage";
 import { RichText } from "../components/RichText";
+import { Reveal } from "../components/Reveal";
 
 const FACILITY_ICONS = { library: Library, lab: FlaskConical, playground: Trees };
 
@@ -36,70 +37,82 @@ export function About() {
 
       <Section>
         <Container>
-          <HistoryRow>
-            <Card $pad={8}>
-              <IconTitle><BookOpen size={22} /> {t("about.historyTitle")}</IconTitle>
-              {page?.content?.imageUrl && (
-                <HistoryImage>
-                  <SmartImage src={page.content.imageUrl} alt={t("about.historyTitle")} height="240px" />
-                </HistoryImage>
-              )}
-              {page ? <RichText html={pickLang(page, "body")} /> : <Body>{t("about.subtitle")}</Body>}
-            </Card>
-            <EstablishedCard>
-              <GraduationCap size={30} />
-              <span>{t("about.establishedLabel")}</span>
-              <strong>{established}</strong>
-              <em>{t("about.legacy")}</em>
-            </EstablishedCard>
-          </HistoryRow>
+          <Reveal>
+            <HistoryRow>
+              <Card $pad={8}>
+                <IconTitle><BookOpen size={22} /> {t("about.historyTitle")}</IconTitle>
+                {page?.content?.imageUrl && (
+                  <HistoryImage>
+                    <SmartImage src={page.content.imageUrl} alt={t("about.historyTitle")} height="240px" />
+                  </HistoryImage>
+                )}
+                {page ? <RichText html={pickLang(page, "body")} /> : <Body>{t("about.subtitle")}</Body>}
+              </Card>
+              <EstablishedCard>
+                <GraduationCap size={30} />
+                <span>{t("about.establishedLabel")}</span>
+                <strong>{established}</strong>
+                <em>{t("about.legacy")}</em>
+              </EstablishedCard>
+            </HistoryRow>
+          </Reveal>
         </Container>
       </Section>
 
       <Section $bg="alt">
         <Container>
           <Grid $cols={2}>
-            <Card $pad={8} $accent="secondary">
-              <IconRound $tone="secondary"><Target size={22} /></IconRound>
-              <h3>{t("about.missionTitle")}</h3>
-              <Body>{page?.content?.mission || t("about.missionBody")}</Body>
-            </Card>
-            <Card $pad={8} $accent="primary">
-              <IconRound $tone="primary"><Eye size={22} /></IconRound>
-              <h3>{t("about.visionTitle")}</h3>
-              <Body>{page?.content?.vision || t("about.visionBody")}</Body>
-            </Card>
+            <Reveal direction="right">
+              <Card $pad={8} $accent="secondary" $hover>
+                <IconRound $tone="secondary"><Target size={22} /></IconRound>
+                <h3>{t("about.missionTitle")}</h3>
+                <Body>{page?.content?.mission || t("about.missionBody")}</Body>
+              </Card>
+            </Reveal>
+            <Reveal direction="left" delay={90}>
+              <Card $pad={8} $accent="primary" $hover>
+                <IconRound $tone="primary"><Eye size={22} /></IconRound>
+                <h3>{t("about.visionTitle")}</h3>
+                <Body>{page?.content?.vision || t("about.visionBody")}</Body>
+              </Card>
+            </Reveal>
           </Grid>
         </Container>
       </Section>
 
       <Section>
         <Container>
-          <PrincipalCard>
-            <Photo><SmartImage src="" alt="Principal" height="220px" /></Photo>
-            <div>
-              <h3>{t("about.principalTitle")}</h3>
-              <Body>{t("home.missionBody")}</Body>
-            </div>
-          </PrincipalCard>
+          <Reveal direction="scale">
+            <PrincipalCard>
+              <Photo><SmartImage src="" alt="Principal" height="220px" /></Photo>
+              <div>
+                <h3>{t("about.principalTitle")}</h3>
+                <Body>{t("home.missionBody")}</Body>
+              </div>
+            </PrincipalCard>
+          </Reveal>
         </Container>
       </Section>
 
       <Section $bg="alt">
         <Container>
-          <Center>
-            <h2>{t("about.facilitiesTitle")}</h2>
-            <p>{t("about.facilitiesSubtitle")}</p>
-          </Center>
+          <Reveal>
+            <Center>
+              <h2>{t("about.facilitiesTitle")}</h2>
+              <p>{t("about.facilitiesSubtitle")}</p>
+            </Center>
+          </Reveal>
           <Grid $cols={3}>
-            {facilities.map((f) => {
+            {facilities.map((f, i) => {
               const Icon = f.icon;
               return (
-                <Card key={f.title} $hover $pad={6}>
-                  <IconRound $tone="secondary"><Icon size={20} /></IconRound>
-                  <h4>{f.title}</h4>
-                  <Body>{f.desc}</Body>
-                </Card>
+                <Reveal key={f.title} delay={i * 90}>
+                  <Card $hover $pad={6}>
+                    <IconRound $tone="secondary"><Icon size={20} /></IconRound>
+                    <h4>{f.title}</h4>
+                    <Body>{f.desc}</Body>
+                  </Card>
+                </Reveal>
               );
             })}
           </Grid>

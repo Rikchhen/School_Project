@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import styled from "styled-components";
 import { AlertTriangle, FileText, Download, Eye, Search } from "lucide-react";
+import { Link } from "../lib/router";
 import { useLang } from "../context/LanguageContext";
 import { useSocketEvent } from "../context/SocketContext";
 import { useToast } from "../context/ToastContext";
@@ -11,6 +12,7 @@ import { Badge } from "../components/ui/Badge";
 import { Skeleton } from "../components/ui/Skeleton";
 import { RichText } from "../components/RichText";
 import { SmartImage } from "../components/SmartImage";
+import { Reveal } from "../components/Reveal";
 import { dateParts } from "../lib/format";
 
 const FILTERS = [
@@ -18,6 +20,9 @@ const FILTERS = [
   { key: "academic", labelKey: "notices.filterAcademic" },
   { key: "administrative", labelKey: "notices.filterAdministrative" },
 ];
+
+/** True if the date is within the last 7 days. */
+const isRecent = (d) => Date.now() - new Date(d).getTime() < 7 * 86400000;
 
 export function Notices() {
   const { t, pickLang, lang } = useLang();
@@ -85,7 +90,7 @@ export function Notices() {
           ) : list.length === 0 ? (
             <EmptyState>{t("notices.empty")}</EmptyState>
           ) : (
-            <List>
+            <List as={Reveal} stagger={80}>
               {list.map((n) => {
                 const dp = dateParts(n.publishedAt || n.createdAt, lang);
                 const gallery = [n.imageUrl, ...(n.images || [])].filter(Boolean);
@@ -99,32 +104,36 @@ export function Notices() {
 
                   <Body>
                     <Tags>
+                      {isRecent(n.publishedAt || n.createdAt) && (
+                        <Badge $tone="primary">{lang === "ne" ? "नयाँ" : "NEW"}</Badge>
+                      )}
                       {n.priority === "urgent" && (
-                        <Badge $tone="danger"><AlertTriangle size={12} /> {t("notices.filterAdministrative")}</Badge>
+                        <Badge $tone="danger"><AlertTriangle size={12} /> {lang === "ne" ? "जरुरी" : "Urgent"}</Badge>
                       )}
                       <Badge $tone={n.category === "academic" ? "secondary" : "neutral"}>
                         {n.category === "academic" ? t("notices.filterAcademic") : t("notices.filterAdministrative")}
                       </Badge>
                     </Tags>
-                    <h3 lang={pickLang(n, "title") === n.titleNe ? "ne" : undefined}>{pickLang(n, "title")}</h3>
+                    <TitleLink to={`/notices/${n._id}`} lang={pickLang(n, "title") === n.titleNe ? "ne" : undefined}>
+                      {pickLang(n, "title")}
+                    </TitleLink>
                     <RichText html={pickLang(n, "body")} />
                     {gallery.length > 0 && (
                       <NoticeImages>
                         {gallery.slice(0, 4).map((src, i) => (
-                          <a key={i} href={src} target="_blank" rel="noreferrer"><SmartImage src={src} alt="" height="88px" /></a>
+                          <Link key={i} to={`/notices/${n._id}`}><SmartImage src={src} alt="" height="88px" /></Link>
                         ))}
                       </NoticeImages>
                     )}
                   </Body>
 
                   <Action>
-                    {n.attachmentUrl ? (
+                    <ActionLink as={Link} to={`/notices/${n._id}`}>
+                      <Eye size={16} /> {t("common.viewDetails")}
+                    </ActionLink>
+                    {n.attachmentUrl && (
                       <ActionLink href={n.attachmentUrl} target="_blank" rel="noreferrer">
                         <Download size={16} /> {t("common.downloadPdf")}
-                      </ActionLink>
-                    ) : (
-                      <ActionLink as="button" type="button">
-                        <Eye size={16} /> {t("common.viewDetails")}
                       </ActionLink>
                     )}
                   </Action>
@@ -185,15 +194,20 @@ const DateChip = styled.div`
 `;
 const Body = styled.div`
   min-width: 0;
-  h3 { color: ${({ theme }) => theme.colors.text}; font-size: ${({ theme }) => theme.fontSizes.lg}; margin: 6px 0; }
   font-size: ${({ theme }) => theme.fontSizes.sm};
+`;
+const TitleLink = styled(Link)`
+  display: inline-block; color: ${({ theme }) => theme.colors.text};
+  font-family: ${({ theme }) => theme.fonts.heading}; font-weight: 700;
+  font-size: ${({ theme }) => theme.fontSizes.lg}; margin: 6px 0;
+  &:hover { color: ${({ theme }) => theme.colors.primary}; }
 `;
 const Tags = styled.div`display: flex; gap: ${({ theme }) => theme.space[2]}; flex-wrap: wrap;`;
 const NoticeImages = styled.div`
   display: flex; gap: ${({ theme }) => theme.space[2]}; margin-top: ${({ theme }) => theme.space[3]}; flex-wrap: wrap;
   a { width: 120px; border-radius: ${({ theme }) => theme.radii.md}; overflow: hidden; border: 1px solid ${({ theme }) => theme.colors.border}; }
 `;
-const Action = styled.div`flex-shrink: 0;`;
+const Action = styled.div`flex-shrink: 0; display: flex; flex-direction: column; gap: ${({ theme }) => theme.space[2]}; align-items: stretch;`;
 const ActionLink = styled.a`
   display: inline-flex; align-items: center; gap: 8px;
   background: ${({ theme }) => theme.colors.surfaceAlt};

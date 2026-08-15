@@ -130,6 +130,11 @@ export function ManageSettings() {
           <Field><Label>Email</Label><Input value={form.contact.email} onChange={(e) => setContact("email", e.target.value)} /></Field>
           <Field><Label>Office hours (English)</Label><Input value={form.contact.hours} onChange={(e) => setContact("hours", e.target.value)} /></Field>
           <Field><Label>Office hours (Nepali)</Label><Input value={form.contact.hoursNe} onChange={(e) => setContact("hoursNe", e.target.value)} /></Field>
+          <Field style={{ gridColumn: "1 / -1" }}>
+            <Label>Map embed URL (optional)</Label>
+            <Input value={form.contact.mapUrl} onChange={(e) => setContact("mapUrl", e.target.value)} placeholder="https://www.google.com/maps/embed?..." />
+            <small style={{ color: "#6b7280" }}>Google Maps → Share → Embed a map → copy the <code>src</code> URL from the iframe.</small>
+          </Field>
         </SocialGrid>
       </Card>
 

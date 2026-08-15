@@ -158,7 +158,7 @@ export function Home() {
               ) : (
                 <Stack>
                   {notices.map((n) => (
-                    <MiniCard key={n._id} to="/notices" $accent={n.priority === "urgent" ? "primary" : "secondary"}>
+                    <MiniCard key={n._id} to={`/notices/${n._id}`} $accent={n.priority === "urgent" ? "primary" : "secondary"}>
                       <Badge $tone={n.priority === "urgent" ? "danger" : "secondary"}>
                         {n.category === "academic" ? t("notices.filterAcademic") : t("notices.filterAdministrative")}
                       </Badge>
@@ -181,7 +181,7 @@ export function Home() {
               ) : (
                 <Stack>
                   {events.map((e) => (
-                    <MiniCard key={e._id} to="/events" $accent="secondary">
+                    <MiniCard key={e._id} to={`/events/${e._id}`} $accent="secondary">
                       <time>{formatDate(e.startDate, lang)}</time>
                       <strong>{pickLang(e, "title")}</strong>
                     </MiniCard>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import { Menu, X, Globe, Phone, Mail, MapPin, GraduationCap, ChevronDown } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaYoutube, FaXTwitter, FaTiktok, FaLinkedinIn, FaWhatsapp } from "react-icons/fa6";
 import { Link, useRouter } from "../lib/router";
@@ -8,6 +8,10 @@ import { useSettings } from "../context/SettingsContext";
 import { Container } from "../components/ui/Layout";
 import { AnnouncementBar } from "../components/AnnouncementBar";
 import { AdmissionAssistant } from "../components/AdmissionAssistant";
+import { ThemeToggle } from "../components/ThemeToggle";
+import { BackToTop } from "../components/BackToTop";
+import { ScrollProgress } from "../components/ScrollProgress";
+import { MobileActionBar } from "../components/MobileActionBar";
 import logo from "../assets/images/logo.png";
 
 // Grouped nav with dropdowns (About / Media) plus flat links.
@@ -56,11 +60,14 @@ export function PublicLayout({ children }) {
 
   return (
     <Shell>
+      <a href="#main-content" className="skip-link">Skip to content</a>
+      <ScrollProgress />
+
       {/* Announcement / top bar */}
       <AnnouncementBar />
 
       {/* Utility bar */}
-      <TopBar>
+      <TopBar className="no-print">
         <Container>
           <TopRow>
             <TopInfo>
@@ -76,6 +83,7 @@ export function PublicLayout({ children }) {
                   })}
                 </TopSocials>
               )}
+              <ThemeToggle variant="onDark" />
               {LangBtn}
             </TopRight>
           </TopRow>
@@ -124,6 +132,7 @@ export function PublicLayout({ children }) {
                 <MobileLang onClick={() => { toggleLang(); }}>
                   <Globe size={16} /> {t("common.langToggle")}
                 </MobileLang>
+                <MobileTheme><ThemeToggle variant="surface" withLabel /></MobileTheme>
               </Nav>
               <ApplyBtn to="/admissions"><GraduationCap size={16} /> {t("nav.applyNow")}</ApplyBtn>
               <Hamburger onClick={() => setMenuOpen((o) => !o)} aria-label="Menu" aria-expanded={menuOpen}>
@@ -134,7 +143,9 @@ export function PublicLayout({ children }) {
         </Container>
       </Header>
 
-      <Main>{children}</Main>
+      <Main id="main-content">
+        <PageFade key={path}>{children}</PageFade>
+      </Main>
 
       {/* Footer */}
       <Footer>
@@ -192,8 +203,10 @@ export function PublicLayout({ children }) {
         </FooterBarWrap>
       </Footer>
 
-      {/* Floating admission assistant */}
+      {/* Floating admission assistant + back-to-top + mobile action bar */}
       <AdmissionAssistant />
+      <BackToTop />
+      <MobileActionBar />
     </Shell>
   );
 }
@@ -319,6 +332,10 @@ const MobileLang = styled.button`
   display: none;
   ${({ theme }) => theme.media.laptop(`display: inline-flex; align-items: center; gap: 6px; color: ${theme.colors.primary}; font-weight: 600; padding: 0.85rem 0;`)}
 `;
+const MobileTheme = styled.div`
+  display: none;
+  ${({ theme }) => theme.media.laptop(`display: flex; padding: 0.6rem 0;`)}
+`;
 const ApplyBtn = styled(Link)`
   display: inline-flex; align-items: center; gap: 6px; flex-shrink: 0;
   background: ${({ theme }) => theme.colors.primary}; color: #fff;
@@ -351,6 +368,11 @@ const Hamburger = styled.button`
 `;
 
 const Main = styled.main`flex: 1;`;
+const pageFade = keyframes`from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: none; }`;
+const PageFade = styled.div`
+  animation: ${pageFade} 0.4s ease;
+  @media (prefers-reduced-motion: reduce) { animation: none; }
+`;
 
 /* ---------- Footer ---------- */
 const Footer = styled.footer`background: ${({ theme }) => theme.colors.secondary}; color: #fff;`;

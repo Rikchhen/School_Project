@@ -7,11 +7,12 @@ import { Container, Section, Grid } from "../components/ui/Layout";
 import { Card } from "../components/ui/Card";
 import { SkeletonCard } from "../components/ui/Skeleton";
 import { SmartImage } from "../components/SmartImage";
+import { FetchError } from "../components/FetchError";
 import { Reveal } from "../components/Reveal";
 
 export function Committee() {
   const { t, pickLang, lang } = useLang();
-  const { data, loading } = useFetch("/committee?published=true");
+  const { data, loading, error, refetch } = useFetch("/committee?published=true");
   const members = data?.items || [];
   const chair = members.find((m) => /chair/i.test(m.role)) || members[0];
 
@@ -35,7 +36,9 @@ export function Committee() {
             </Reveal>
           )}
 
-          {loading ? (
+          {error ? (
+            <FetchError onRetry={refetch} />
+          ) : loading ? (
             <Grid $cols={3} style={{ marginTop: "2.5rem" }}>{[0, 1, 2].map((i) => <SkeletonCard key={i} />)}</Grid>
           ) : members.length === 0 ? (
             <Empty>{t("admin.noItems")}</Empty>
