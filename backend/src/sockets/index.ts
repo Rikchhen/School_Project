@@ -2,6 +2,7 @@ import type { Server as HttpServer } from "node:http";
 import { Server, type Socket } from "socket.io";
 import { env } from "../config/env";
 import { verifyToken } from "../utils/jwt";
+import { AdminSessionModel } from "../models/AdminSession";
 
 let io: Server | null = null;
 
@@ -40,15 +41,16 @@ export function initSocket(server: HttpServer): Server {
 
   // Optional auth: admins joining the "admin" room get submission alerts.
   // Public visitors connect anonymously and only receive public broadcasts.
-  io.on("connection", (socket: Socket) => {
+  io.on("connection", async (socket: Socket) => {
     try {
       const raw = socket.handshake.headers.cookie;
       if (raw) {
         const parsed = parseCookies(raw);
         const token = parsed[env.COOKIE_NAME];
         if (token) {
-          verifyToken(token); // throws if invalid
-          socket.join("admins");
+          const payload = verifyToken(token);
+          const session = await AdminSessionModel.exists({ _id: payload.sid, adminId: payload.id, revokedAt: null, expiresAt: { $gt: new Date() } });
+          if (session) socket.join("admins");
         }
       }
     } catch {

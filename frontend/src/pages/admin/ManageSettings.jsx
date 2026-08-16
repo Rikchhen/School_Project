@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import { Plus, Trash2, Save, Heart } from "lucide-react";
+import { Plus, Trash2, Save, Heart, ShieldCheck } from "lucide-react";
 import { api } from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
 import { useSettings } from "../../context/SettingsContext";
@@ -10,14 +10,27 @@ import { Field, Label, Input, Select, Textarea } from "../../components/ui/Input
 import { Skeleton } from "../../components/ui/Skeleton";
 import { ImageUploader } from "../../components/ImageUploader";
 import { MultiImageUploader } from "../../components/MultiImageUploader";
+import { useAuth } from "../../context/AuthContext";
+import { useConfirm } from "../../context/ConfirmContext";
 
 const SOCIAL_FIELDS = ["facebook", "instagram", "youtube", "twitter", "tiktok", "linkedin", "whatsapp"];
 
 export function ManageSettings() {
+  const { confirmRemove } = useConfirm();
   const toast = useToast();
   const { refetch } = useSettings();
+  const { admin, logout } = useAuth();
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [twoFactorSetup, setTwoFactorSetup] = useState(null);
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [recoveryCodes, setRecoveryCodes] = useState([]);
+  const [disablePassword, setDisablePassword] = useState("");
+
+  const startTwoFactor = async () => { try { setTwoFactorSetup(await api.post("/auth/2fa/setup")); } catch (e) { toast.error(e.message); } };
+  const confirmTwoFactor = async () => { try { const r = await api.post("/auth/2fa/confirm", { code: twoFactorCode }); setRecoveryCodes(r.recoveryCodes); setTwoFactorSetup(null); toast.success("Two-factor authentication enabled"); } catch (e) { toast.error(e.message); } };
+  const disableTwoFactor = async () => { try { await api.post("/auth/2fa/disable", { password: disablePassword }); toast.success("Two-factor authentication disabled; please sign in again"); await logout(); } catch (e) { toast.error(e.message); } };
+  const logoutEverywhere = async () => { try { await api.post("/auth/logout-all"); await logout(); } catch (e) { toast.error(e.message); } };
 
   useEffect(() => {
     api.get("/settings").then((r) => {
@@ -26,6 +39,7 @@ export function ManageSettings() {
       setForm({
         socials: { ...Object.fromEntries(SOCIAL_FIELDS.map((k) => [k, s.socials?.[k] || ""])) },
         donationEnabled: !!s.donationEnabled,
+        heroOpacity: typeof s.heroOpacity === "number" ? s.heroOpacity : 1,
         banners: (s.banners || []).map((b) => ({ ...b })),
         announcement: {
           enabled: !!a.enabled, text: a.text || "", textNe: a.textNe || "",
@@ -46,17 +60,17 @@ export function ManageSettings() {
   const setAnn = (k, v) => setForm((f) => ({ ...f, announcement: { ...f.announcement, [k]: v } }));
   const setPartner = (i, k, v) => setForm((f) => ({ ...f, partners: f.partners.map((p, idx) => (idx === i ? { ...p, [k]: v } : p)) }));
   const addPartner = () => setForm((f) => ({ ...f, partners: [...f.partners, { name: "", logoUrl: "", url: "" }] }));
-  const removePartner = (i) => setForm((f) => ({ ...f, partners: f.partners.filter((_, idx) => idx !== i) }));
+  const removePartner = async (i) => (await confirmRemove(`partner “${form.partners[i]?.name || i + 1}”`)) && setForm((f) => ({ ...f, partners: f.partners.filter((_, idx) => idx !== i) }));
   const setContact = (k, v) => setForm((f) => ({ ...f, contact: { ...f.contact, [k]: v } }));
   const setStat = (i, k, v) => setForm((f) => ({ ...f, stats: f.stats.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)) }));
   const addStat = () => setForm((f) => ({ ...f, stats: [...f.stats, { value: 0, suffix: "+", label: "", labelNe: "" }] }));
-  const removeStat = (i) => setForm((f) => ({ ...f, stats: f.stats.filter((_, idx) => idx !== i) }));
+  const removeStat = async (i) => (await confirmRemove(`stat “${form.stats[i]?.label || i + 1}”`)) && setForm((f) => ({ ...f, stats: f.stats.filter((_, idx) => idx !== i) }));
   const setFacility = (i, k, v) => setForm((f) => ({ ...f, facilities: f.facilities.map((x, idx) => (idx === i ? { ...x, [k]: v } : x)) }));
   const addFacility = () => setForm((f) => ({ ...f, facilities: [...f.facilities, { icon: "library", title: "", titleNe: "", desc: "", descNe: "" }] }));
-  const removeFacility = (i) => setForm((f) => ({ ...f, facilities: f.facilities.filter((_, idx) => idx !== i) }));
+  const removeFacility = async (i) => (await confirmRemove(`facility “${form.facilities[i]?.title || i + 1}”`)) && setForm((f) => ({ ...f, facilities: f.facilities.filter((_, idx) => idx !== i) }));
   const setBanner = (i, k, v) => setForm((f) => ({ ...f, banners: f.banners.map((b, idx) => (idx === i ? { ...b, [k]: v } : b)) }));
   const addBanner = () => setForm((f) => ({ ...f, banners: [...f.banners, { imageUrl: "", title: "", titleNe: "", subtitle: "", subtitleNe: "", ctaLabel: "", ctaLabelNe: "", ctaLink: "", order: f.banners.length + 1 }] }));
-  const removeBanner = (i) => setForm((f) => ({ ...f, banners: f.banners.filter((_, idx) => idx !== i) }));
+  const removeBanner = async (i) => (await confirmRemove(`banner ${i + 1}`)) && setForm((f) => ({ ...f, banners: f.banners.filter((_, idx) => idx !== i) }));
 
   const save = async () => {
     setSaving(true);
@@ -79,6 +93,20 @@ export function ManageSettings() {
         <h1>Settings</h1>
         <Button $variant="primary" onClick={save} disabled={saving}><Save size={18} /> {saving ? "Saving…" : "Save changes"}</Button>
       </Header>
+
+      <Card $pad={6} style={{ marginBottom: 20 }}>
+        <h3><ShieldCheck size={18} /> Account security</h3>
+        <Muted>Protect this administrator account with an authenticator app and revoke active sessions.</Muted>
+        {!admin?.twoFactorEnabled && !twoFactorSetup && <Button style={{ marginTop: 14 }} $variant="outline" onClick={startTwoFactor}>Set up two-factor authentication</Button>}
+        {twoFactorSetup && <SocialGrid>
+          <Field style={{ gridColumn: "1 / -1" }}><Label>Authenticator secret</Label><Input readOnly value={twoFactorSetup.secret} /><Muted>Add this secret to your authenticator app, then enter its six-digit code.</Muted></Field>
+          <Field><Label>Six-digit code</Label><Input inputMode="numeric" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} /></Field>
+          <Button $variant="primary" onClick={confirmTwoFactor}>Confirm and enable</Button>
+        </SocialGrid>}
+        {recoveryCodes.length > 0 && <RecoveryBox><strong>Save these one-use recovery codes now:</strong><code>{recoveryCodes.join("\n")}</code></RecoveryBox>}
+        {admin?.twoFactorEnabled && <SocialGrid><Field><Label>Current password</Label><Input type="password" value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} /></Field><Button $variant="outline" onClick={disableTwoFactor}>Disable two-factor authentication</Button></SocialGrid>}
+        <Button style={{ marginTop: 14 }} $variant="ghost" onClick={logoutEverywhere}>Log out all devices</Button>
+      </Card>
 
       <Card $pad={6} style={{ marginBottom: 20 }}>
         <ToggleRow>
@@ -212,6 +240,20 @@ export function ManageSettings() {
           <Button $variant="outline" $size="sm" onClick={addBanner}><Plus size={16} /> Add banner</Button>
         </SpaceBetween>
 
+        <OpacityRow>
+          <div>
+            <Label>Hero image opacity — {Math.round((form.heroOpacity ?? 1) * 100)}%</Label>
+            <Muted>How visible the banner photo/video is. 100% = fully clear, lower = faded.</Muted>
+          </div>
+          <input
+            type="range" min="0.2" max="1" step="0.05"
+            value={form.heroOpacity ?? 1}
+            onChange={(e) => setForm((f) => ({ ...f, heroOpacity: parseFloat(e.target.value) }))}
+            style={{ width: 220 }}
+            aria-label="Hero image opacity"
+          />
+        </OpacityRow>
+
         <BulkAdd>
           <Muted style={{ marginBottom: 8 }}>Add several photos at once — each becomes a new slide:</Muted>
           <MultiImageUploader
@@ -246,7 +288,7 @@ export function ManageSettings() {
                 <Label>Background video (optional — overrides photo)</Label>
                 <ImageUploader value={b.videoUrl} accept="video/*" onUploaded={(url) => setBanner(i, "videoUrl", url)} label="Upload video" />
                 {b.videoUrl && (
-                  <button type="button" onClick={() => setBanner(i, "videoUrl", "")} style={{ color: "#b1002c", fontSize: 13, fontWeight: 600, marginTop: 6 }}>Remove video</button>
+                  <button type="button" onClick={async () => (await confirmRemove("this banner video")) && setBanner(i, "videoUrl", "")} style={{ color: "#b1002c", fontSize: 13, fontWeight: 600, marginTop: 6 }}>Remove video</button>
                 )}
               </div>
             </BannerMedia>
@@ -268,6 +310,7 @@ export function ManageSettings() {
 
 const Header = styled.div`display: flex; align-items: center; justify-content: space-between; margin-bottom: ${({ theme }) => theme.space[6]}; h1 { font-size: ${({ theme }) => theme.fontSizes["3xl"]}; }`;
 const Muted = styled.p`color: ${({ theme }) => theme.colors.textMuted}; font-size: ${({ theme }) => theme.fontSizes.sm};`;
+const RecoveryBox = styled.div`margin-top: 16px; padding: 16px; border: 1px solid ${({ theme }) => theme.colors.warning}; border-radius: 8px; display: grid; gap: 10px; code { white-space: pre-wrap; }`;
 const SocialGrid = styled.div`display: grid; grid-template-columns: 1fr 1fr; gap: ${({ theme }) => theme.space[4]}; margin-top: ${({ theme }) => theme.space[4]}; ${({ theme }) => theme.media.mobile(`grid-template-columns: 1fr;`)}`;
 const ToggleRow = styled.div`display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.space[4]}; h3 { display: flex; align-items: center; gap: 8px; }`;
 const Switch = styled.button`
@@ -289,6 +332,12 @@ const BulkAdd = styled.div`
   border: 1px dashed ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.md};
   padding: ${({ theme }) => theme.space[4]}; margin-top: ${({ theme }) => theme.space[4]};
   background: ${({ theme }) => theme.colors.surfaceAlt};
+`;
+const OpacityRow = styled.div`
+  display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.space[4]};
+  border: 1px solid ${({ theme }) => theme.colors.border}; border-radius: ${({ theme }) => theme.radii.md};
+  padding: ${({ theme }) => theme.space[4]}; margin-top: ${({ theme }) => theme.space[4]}; flex-wrap: wrap;
+  input[type="range"] { accent-color: ${({ theme }) => theme.colors.primary}; }
 `;
 const IconBtn = styled.button`
   width: 32px; height: 32px; display: grid; place-items: center; border-radius: ${({ theme }) => theme.radii.md};

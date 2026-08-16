@@ -3,6 +3,8 @@ import { createApp } from "./app";
 import { connectDB } from "./config/db";
 import { env } from "./config/env";
 import { initSocket } from "./sockets";
+import { purgeExpiredDonorDocuments } from "./services/donorRetention";
+import { isTest } from "./config/env";
 
 async function bootstrap() {
   await connectDB();
@@ -12,6 +14,11 @@ async function bootstrap() {
 
   // Attach socket.io to the same HTTP server.
   initSocket(server);
+  if (!isTest) {
+    void purgeExpiredDonorDocuments();
+    const retentionTimer = setInterval(() => void purgeExpiredDonorDocuments(), 6 * 60 * 60 * 1000);
+    retentionTimer.unref();
+  }
 
   server.listen(env.PORT, () => {
     console.log(`🚀 API running at http://localhost:${env.PORT}`);

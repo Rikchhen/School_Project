@@ -41,7 +41,7 @@ export const errorHandler: ErrorRequestHandler = (err, _req, res, _next) => {
     message = "A record with that value already exists";
     details = (err as { keyValue?: unknown }).keyValue;
   } else if (err instanceof Error) {
-    message = err.message || message;
+    if (!isProd) message = err.message || message;
   }
 
   if (statusCode >= 500 && !isProd) {

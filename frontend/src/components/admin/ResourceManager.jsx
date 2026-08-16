@@ -11,6 +11,7 @@ import { ImageUploader } from "../ImageUploader";
 import { MultiImageUploader } from "../MultiImageUploader";
 import { RichTextEditor } from "./RichTextEditor";
 import { Modal } from "./Modal";
+import { useConfirm } from "../../context/ConfirmContext";
 
 /**
  * Generic list + create/edit/delete manager driven by a config object.
@@ -24,6 +25,7 @@ import { Modal } from "./Modal";
 export function ResourceManager({ config }) {
   const toast = useToast();
   const { t } = useLang();
+  const { confirmDelete } = useConfirm();
   const [items, setItems] = useState(null);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState(null);
@@ -65,6 +67,18 @@ export function ResourceManager({ config }) {
 
   const save = async (e) => {
     e.preventDefault();
+    const missing = config.fields.find((field) => {
+      if (!field.required) return false;
+      const value = form[field.name];
+      if (Array.isArray(value)) return value.length === 0;
+      if (field.type === "richtext") return !String(value || "").replace(/<[^>]*>/g, "").trim();
+      return !String(value ?? "").trim();
+    });
+    if (missing) {
+      toast.error(`${missing.label} is required`);
+      document.getElementById(`f-${missing.name}`)?.focus();
+      return;
+    }
     setSaving(true);
     try {
       const payload = { ...form };
@@ -96,7 +110,8 @@ export function ResourceManager({ config }) {
   };
 
   const remove = async (row) => {
-    if (!window.confirm(t("admin.confirmDelete"))) return;
+    const label = row.title || row.name || row.slug || config.title.toLowerCase();
+    if (!(await confirmDelete(`“${label}”`))) return;
     try {
       await api.del(`${config.endpoint}/${row._id}`);
       toast.success(`${config.title} deleted`);
@@ -231,6 +246,7 @@ function renderField(f, value, onChange) {
           accept={f.type === "pdf" ? "application/pdf" : "image/*"}
           label={f.type === "pdf" ? "Upload PDF" : "Upload image"}
           onUploaded={(url) => onChange(url)}
+          required={f.required}
         />
       );
     case "images":
@@ -239,6 +255,7 @@ function renderField(f, value, onChange) {
           value={Array.isArray(value) ? value : []}
           onChange={(arr) => onChange(arr)}
           label={f.label || "Upload images"}
+          required={f.required}
         />
       );
     default:

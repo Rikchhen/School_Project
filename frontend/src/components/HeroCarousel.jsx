@@ -1,26 +1,26 @@
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import styled, { keyframes, css } from "styled-components";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ArrowRight, ChevronDown } from "lucide-react";
-import { Link } from "../lib/router";
+import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
 import { useLang } from "../context/LanguageContext";
+import { useSettings } from "../context/SettingsContext";
 import { formatNumber } from "../lib/format";
-import { Container } from "./ui/Layout";
-import { Button } from "./ui/Button";
-import { auroraDrift, kenBurns, scrollCue } from "../styles/animations";
+import { kenBurns, scrollCue } from "../styles/animations";
 import heroImg from "../assets/images/hero.png";
 
 /**
  * Auto-advancing hero banner carousel.
  * - Crossfade between slides (framer AnimatePresence).
- * - Ken Burns zoom on the background photo + drifting aurora glow behind copy.
- * - Headline / subtitle / CTA enter with a staggered spring.
- * - Floating stat cards idle-float and animate in.
+ * - Ken Burns zoom on the background photo; image opacity is admin-controlled
+ *   (Settings → Hero image opacity), default fully opaque.
+ * - Image/video only — no text overlay; floating stat cards idle-float and animate in.
  * Slides come from admin Settings; falls back to a single default slide.
  * Pauses on hover/focus and respects prefers-reduced-motion.
  */
 export function HeroCarousel({ slides = [], stats = [] }) {
-  const { pickLang, t, lang } = useLang();
+  const { pickLang, lang } = useLang();
+  const { settings } = useSettings();
+  const heroOpacity = typeof settings.heroOpacity === "number" ? settings.heroOpacity : 1;
   const reduce = useReducedMotion();
   const heroStats = (stats.length
     ? stats
@@ -43,20 +43,6 @@ export function HeroCarousel({ slides = [], stats = [] }) {
   }, [paused, reduce, list.length]);
 
   const slide = list[index];
-  const title = slide ? pickLang(slide, "title") : t("home.heroTitle");
-  const subtitle = slide ? pickLang(slide, "subtitle") : t("home.heroSubtitle");
-  const ctaLabel = slide ? pickLang(slide, "ctaLabel") : t("home.ctaAdmissions");
-  const ctaLink = slide?.ctaLink || "/admissions";
-
-  // Stagger for the headline block.
-  const container = {
-    hidden: {},
-    show: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } },
-  };
-  const item = {
-    hidden: { opacity: 0, y: 24 },
-    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 90, damping: 16 } },
-  };
 
   return (
     <Hero
@@ -66,12 +52,6 @@ export function HeroCarousel({ slides = [], stats = [] }) {
       onBlurCapture={() => setPaused(false)}
       aria-roledescription="carousel"
     >
-      {/* Ambient aurora glow — subtle, pushed to the corners so the photo stays crisp */}
-      <Aurora aria-hidden>
-        <Blob $c="primary" style={{ top: "-22%", left: "-14%" }} />
-        <Blob $c="secondary" style={{ bottom: "-30%", right: "-12%" }} />
-      </Aurora>
-
       {/* Background media crossfade */}
       <AnimatePresence initial={false} mode="popLayout">
         <BgLayer
@@ -83,28 +63,12 @@ export function HeroCarousel({ slides = [], stats = [] }) {
           aria-hidden
         >
           {slide?.videoUrl ? (
-            <BgVideo src={slide.videoUrl} autoPlay muted loop playsInline />
+            <BgVideo src={slide.videoUrl} autoPlay muted loop playsInline $opacity={heroOpacity} />
           ) : (
-            <Bg $ken={!reduce} src={slide?.imageUrl || heroImg} alt="" onError={(e) => { e.currentTarget.src = heroImg; }} />
+            <Bg $ken={!reduce} $opacity={heroOpacity} src={slide?.imageUrl || heroImg} alt="" onError={(e) => { e.currentTarget.src = heroImg; }} />
           )}
         </BgLayer>
       </AnimatePresence>
-      <Fade />
-
-      {/* Copy (re-runs stagger on slide change via keyed motion element) */}
-      <Container>
-        <Inner as={motion.div} key={`copy-${index}`} variants={container} initial="hidden" animate="show">
-          <motion.h1 variants={item}>{title}</motion.h1>
-          {subtitle && <motion.p variants={item}>{subtitle}</motion.p>}
-          {ctaLabel && (
-            <motion.div variants={item} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }} style={{ alignSelf: "flex-start" }}>
-              <CtaButton as={Link} to={ctaLink} $variant="primary" $size="lg">
-                {ctaLabel} <ArrowRight size={18} />
-              </CtaButton>
-            </motion.div>
-          )}
-        </Inner>
-      </Container>
 
       {/* Floating stat cards */}
       <HeroStats aria-hidden>
@@ -154,48 +118,17 @@ const Hero = styled.section`
   ${({ theme }) => theme.media.tablet(`height: 480px;`)}
 `;
 
-/* ----- Ambient aurora ----- */
-const Aurora = styled.div`position: absolute; inset: 0; overflow: hidden; z-index: 0;`;
-const Blob = styled.div`
-  position: absolute; width: 34vw; height: 34vw; max-width: 440px; max-height: 440px;
-  border-radius: 50%; filter: blur(90px);
-  opacity: ${({ theme }) => (theme.mode === "dark" ? 0.28 : 0.2)};
-  background: ${({ theme, $c }) => theme.colors[$c]};
-  animation: ${auroraDrift} 20s ease-in-out infinite;
-  will-change: transform;
-  &:nth-child(2) { animation-duration: 26s; animation-direction: reverse; }
-`;
-
 const BgLayer = styled(motion.div)`position: absolute; inset: 0; z-index: 0;`;
 const Bg = styled.img`
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.4;
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: ${({ $opacity }) => ($opacity ?? 1)};
   ${({ $ken }) => $ken && css`animation: ${kenBurns} 24s ease-in-out infinite;`}
   will-change: transform;
 `;
 const BgVideo = styled.video`
-  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; opacity: 0.45;
+  position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+  opacity: ${({ $opacity }) => ($opacity ?? 1)};
 `;
-const Fade = styled.div`
-  position: absolute; inset: 0; z-index: 1;
-  background: ${({ theme }) => theme.gradients.heroFade};
-`;
-const Inner = styled.div`
-  position: relative; z-index: 2; max-width: 640px;
-  display: flex; flex-direction: column; gap: ${({ theme }) => theme.space[4]};
-  h1 {
-    font-size: ${({ theme }) => theme.fontSizes["5xl"]};
-    background: ${({ theme }) => theme.gradients.primary};
-    -webkit-background-clip: text; background-clip: text; color: transparent;
-    -webkit-text-fill-color: transparent;
-    line-height: ${({ theme }) => theme.lineHeights.tight};
-    ${({ theme }) => theme.media.tablet(`font-size: 2.35rem;`)}
-  }
-  p { color: ${({ theme }) => theme.colors.textBody}; font-size: ${({ theme }) => theme.fontSizes.lg}; max-width: 48ch; }
-`;
-const CtaButton = styled(Button)`
-  margin-top: ${({ theme }) => theme.space[2]};
-`;
-
 const HeroStats = styled.div`
   position: absolute; right: 76px; top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; gap: ${({ theme }) => theme.space[3]}; z-index: 3;

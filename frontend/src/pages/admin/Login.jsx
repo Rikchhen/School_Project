@@ -17,6 +17,8 @@ export function AdminLogin() {
   const toast = useToast();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
+  const [twoFactorCode, setTwoFactorCode] = useState("");
+  const [needsTwoFactor, setNeedsTwoFactor] = useState(false);
   const [busy, setBusy] = useState(false);
 
   useEffect(() => {
@@ -27,7 +29,8 @@ export function AdminLogin() {
     e.preventDefault();
     setBusy(true);
     try {
-      await login(email, password);
+      const result = await login(email, password, twoFactorCode);
+      if (result.requiresTwoFactor) { setNeedsTwoFactor(true); return; }
       toast.success("Welcome back!");
       navigate("/admin", { replace: true });
     } catch (err) {
@@ -49,6 +52,10 @@ export function AdminLogin() {
           <Label htmlFor="l-email">{t("admin.email")}</Label>
           <Input id="l-email" type="email" required value={email} onChange={(e) => setEmail(e.target.value)} autoComplete="username" />
         </Field>
+        {needsTwoFactor && <Field>
+          <Label htmlFor="l-2fa">Authenticator or recovery code</Label>
+          <Input id="l-2fa" required value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} autoComplete="one-time-code" inputMode="numeric" />
+        </Field>}
         <Field>
           <Label htmlFor="l-pass">{t("admin.password")}</Label>
           <Input id="l-pass" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />

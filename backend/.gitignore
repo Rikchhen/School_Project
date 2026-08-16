@@ -11,6 +11,7 @@ dist
 # uploads (keep the folder, ignore its contents)
 uploads/*
 !uploads/.gitkeep
+private-uploads/
 
 # logs / os
 *.log

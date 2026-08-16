@@ -11,7 +11,7 @@ import { ImageCropper } from "./admin/ImageCropper";
  * onUploaded(url) with the stored public URL. Accepts images and PDFs.
  * When an image is selected, a crop dialog opens before upload.
  */
-export function ImageUploader({ value, onUploaded, accept = "image/*", label = "Upload file" }) {
+export function ImageUploader({ value, onUploaded, accept = "image/*", label = "Upload file", required = false }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [cropFile, setCropFile] = useState(null); // image awaiting crop
@@ -64,8 +64,10 @@ export function ImageUploader({ value, onUploaded, accept = "image/*", label = "
         type="file"
         accept={accept}
         hidden
+        required={required && !value}
         onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }}
       />
+      {required && !value && <RequiredHint role="note">A file is required.</RequiredHint>}
 
       {cropFile && (
         <ImageCropper
@@ -123,5 +125,6 @@ const FileLink = styled.a`
   word-break: break-all;
   text-decoration: underline;
 `;
+const RequiredHint = styled.p`margin: 0; color: ${({ theme }) => theme.colors.danger}; font-size: ${({ theme }) => theme.fontSizes.xs};`;
 
 export default ImageUploader;

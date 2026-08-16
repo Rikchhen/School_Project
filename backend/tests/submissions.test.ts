@@ -2,6 +2,9 @@ import { describe, it, expect, beforeEach } from "vitest";
 import request from "supertest";
 import { createApp } from "../src/app";
 import { createTestAdmin, loginAgent } from "./helpers";
+import { PRIVATE_DONATION_DIR } from "../src/middleware/upload";
+import fs from "node:fs";
+import path from "node:path";
 
 const app = createApp();
 
@@ -30,6 +33,42 @@ describe("Submissions", () => {
   it("keeps the inbox private", async () => {
     const res = await request(app).get("/api/submissions");
     expect(res.status).toBe(401);
+  });
+
+  it("keeps donor documents private and lets an admin retrieve them", async () => {
+    // Minimal PNG signature is sufficient for upload signature validation.
+    const png = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 0, 0, 0, 0, 0]);
+    const created = await request(app)
+      .post("/api/submissions/donation")
+      .field("name", "Donor Person")
+      .field("email", "donor@example.com")
+      .attach("document", png, { filename: "identity.png", contentType: "image/png" });
+    expect(created.status).toBe(201);
+
+    const cookie = await loginAgent(app);
+    const list = await request(app).get("/api/submissions?type=donation").set("Cookie", cookie);
+    const donation = list.body.items[0];
+    expect(donation.documentUrl).not.toContain("/uploads/");
+
+    const denied = await request(app).get(`/api/submissions/${donation._id}/document`);
+    expect(denied.status).toBe(401);
+
+    const allowed = await request(app)
+      .get(`/api/submissions/${donation._id}/document`)
+      .set("Cookie", cookie);
+    expect(allowed.status).toBe(200);
+    expect(allowed.headers["cache-control"]).toBe("private, no-store");
+
+    await fs.promises.unlink(path.join(PRIVATE_DONATION_DIR, donation.documentUrl));
+  });
+
+  it("rejects a file whose bytes do not match its declared image type", async () => {
+    const res = await request(app)
+      .post("/api/submissions/donation")
+      .field("name", "Donor Person")
+      .field("email", "donor@example.com")
+      .attach("document", Buffer.from("not an image"), { filename: "identity.png", contentType: "image/png" });
+    expect(res.status).toBe(400);
   });
 
   it("lets an admin read and update the inbox", async () => {

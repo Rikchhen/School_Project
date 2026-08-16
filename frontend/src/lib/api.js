@@ -4,6 +4,8 @@
  * - Parses JSON and throws a typed ApiError on non-2xx responses.
  */
 const BASE_URL = import.meta.env.VITE_API_URL || "/api";
+const FORM_STARTED_AT = Date.now();
+let csrfToken = "";
 
 export class ApiError extends Error {
   constructor(message, status, details) {
@@ -15,12 +17,20 @@ export class ApiError extends Error {
 }
 
 async function request(path, { method = "GET", body, headers, signal } = {}) {
+  const isPublicForm = ["/submissions/contact", "/submissions/admission", "/submissions/donation"].includes(path);
+  if (isPublicForm && body instanceof FormData) {
+    if (!body.has("website")) body.append("website", "");
+    if (!body.has("formStartedAt")) body.append("formStartedAt", String(FORM_STARTED_AT));
+  } else if (isPublicForm && body && typeof body === "object") {
+    body = { ...body, website: "", formStartedAt: FORM_STARTED_AT };
+  }
   const opts = {
     method,
     credentials: "include",
     headers: { ...(headers || {}) },
     signal,
   };
+  if (!["GET", "HEAD", "OPTIONS"].includes(method) && csrfToken) opts.headers["X-CSRF-Token"] = csrfToken;
 
   if (body instanceof FormData) {
     opts.body = body; // let the browser set the multipart boundary
@@ -40,6 +50,7 @@ async function request(path, { method = "GET", body, headers, signal } = {}) {
   // 204 / empty body
   const text = await res.text();
   const data = text ? safeParse(text) : null;
+  csrfToken = res.headers.get("x-csrf-token") || data?.csrfToken || csrfToken;
 
   if (!res.ok) {
     const message =

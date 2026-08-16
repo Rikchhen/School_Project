@@ -12,6 +12,7 @@ import { ThemeToggle } from "../components/ThemeToggle";
 import { BackToTop } from "../components/BackToTop";
 import { ScrollProgress } from "../components/ScrollProgress";
 import { MobileActionBar } from "../components/MobileActionBar";
+import { InterstitialAd } from "../components/InterstitialAd";
 import logo from "../assets/images/logo.png";
 
 // Grouped nav with dropdowns (About / Media) plus flat links.
@@ -207,6 +208,7 @@ export function PublicLayout({ children }) {
       <AdmissionAssistant />
       <BackToTop />
       <MobileActionBar />
+      <InterstitialAd />
     </Shell>
   );
 }

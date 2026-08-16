@@ -9,12 +9,14 @@ import { Field, Label, Input, Textarea } from "../../components/ui/Input";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { Modal } from "../../components/admin/Modal";
 import { ImageUploader } from "../../components/ImageUploader";
+import { useConfirm } from "../../context/ConfirmContext";
 import { RichTextEditor } from "../../components/admin/RichTextEditor";
 import { FieldsEditor } from "../../components/admin/FieldsEditor";
 
 const EMPTY = { slug: "", title: "", titleNe: "", body: "", bodyNe: "", content: {}, imageUrl: "", published: true };
 
 export function ManagePages() {
+  const { confirmDelete, confirmRemove } = useConfirm();
   const toast = useToast();
   const { t } = useLang();
   const [items, setItems] = useState(null);
@@ -75,7 +77,7 @@ export function ManagePages() {
   };
 
   const remove = async (p) => {
-    if (!window.confirm(t("admin.confirmDelete"))) return;
+    if (!(await confirmDelete(`page “${p.title || p.slug}”`))) return;
     try { await api.del(`/pages/${p.slug}`); toast.success("Page deleted"); await load(); }
     catch (err) { toast.error(err.message); }
   };
@@ -158,7 +160,7 @@ export function ManagePages() {
               and the <code>home-mission</code> section on the Home page.
             </small>
             {form.imageUrl && (
-              <button type="button" onClick={() => setForm((f) => ({ ...f, imageUrl: "" }))}
+              <button type="button" onClick={async () => (await confirmRemove("this page image")) && setForm((f) => ({ ...f, imageUrl: "" }))}
                 style={{ alignSelf: "flex-start", color: "#b1002c", fontSize: 13, fontWeight: 600 }}>
                 Remove image
               </button>

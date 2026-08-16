@@ -23,7 +23,7 @@ export const GlobalStyle = createGlobalStyle`
     font-family: ${({ theme }) => theme.fonts.heading};
     font-weight: ${({ theme }) => theme.fontWeights.bold};
     line-height: ${({ theme }) => theme.lineHeights.tight};
-    letter-spacing: -0.01em; /* tightens the serif display for a polished look */
+    letter-spacing: -0.02em; /* Poppins headings read cleaner slightly tightened */
     color: ${({ theme }) => theme.colors.text};
   }
   /* Nepali headings: serif tracking doesn't suit Devanagari — reset it */

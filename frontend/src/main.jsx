@@ -10,6 +10,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { AuthProvider } from "./context/AuthContext";
 import { SocketProvider } from "./context/SocketContext";
 import { SettingsProvider } from "./context/SettingsContext";
+import { ConfirmProvider } from "./context/ConfirmContext";
 import App from "./App";
 
 ReactDOM.createRoot(document.getElementById("root")).render(
@@ -20,6 +21,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
       <ErrorBoundary>
         <LanguageProvider>
           <ToastProvider>
+            <ConfirmProvider>
             <SettingsProvider>
               <SocketProvider>
                 <AuthProvider>
@@ -29,6 +31,7 @@ ReactDOM.createRoot(document.getElementById("root")).render(
                 </AuthProvider>
               </SocketProvider>
             </SettingsProvider>
+            </ConfirmProvider>
           </ToastProvider>
         </LanguageProvider>
       </ErrorBoundary>

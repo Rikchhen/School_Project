@@ -4,15 +4,17 @@ import { UploadCloud, Loader2, X } from "lucide-react";
 import { api } from "../lib/api";
 import { useToast } from "../context/ToastContext";
 import { SmartImage } from "./SmartImage";
+import { useConfirm } from "../context/ConfirmContext";
 
 /**
  * Upload many images at once. `value` is an array of URLs; `onChange` receives
  * the updated array. Uploads via POST /api/uploads-file/multiple.
  */
-export function MultiImageUploader({ value = [], onChange, label = "Upload images", max = 12 }) {
+export function MultiImageUploader({ value = [], onChange, label = "Upload images", max = 12, required = false }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const toast = useToast();
+  const { confirmRemove } = useConfirm();
   const urls = Array.isArray(value) ? value : [];
 
   const handleFiles = async (fileList) => {
@@ -33,7 +35,10 @@ export function MultiImageUploader({ value = [], onChange, label = "Upload image
     }
   };
 
-  const removeAt = (i) => onChange?.(urls.filter((_, idx) => idx !== i));
+  const removeAt = async (i) => {
+    if (!(await confirmRemove("this uploaded image"))) return;
+    onChange?.(urls.filter((_, idx) => idx !== i));
+  };
 
   return (
     <Wrap>
@@ -48,6 +53,7 @@ export function MultiImageUploader({ value = [], onChange, label = "Upload image
         hidden
         onChange={(e) => { handleFiles(e.target.files); e.target.value = ""; }}
       />
+      {required && urls.length === 0 && <RequiredHint role="note">At least one image is required.</RequiredHint>}
       {urls.length > 0 && (
         <Grid>
           {urls.map((u, i) => (
@@ -84,5 +90,6 @@ const Remove = styled.button`
   border-radius: ${({ theme }) => theme.radii.pill}; background: rgba(0,0,0,0.6); color: #fff;
   &:hover { background: ${({ theme }) => theme.colors.danger}; }
 `;
+const RequiredHint = styled.p`margin: 0; color: ${({ theme }) => theme.colors.danger}; font-size: ${({ theme }) => theme.fontSizes.xs};`;
 
 export default MultiImageUploader;

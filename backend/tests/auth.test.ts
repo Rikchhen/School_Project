@@ -50,4 +50,12 @@ describe("Auth", () => {
     const res = await request(app).get("/api/auth/me");
     expect(res.status).toBe(401);
   });
+
+  it("revokes the server-side session on logout", async () => {
+    const cookie = await loginAgent(app);
+    const loggedOut = await request(app).post("/api/auth/logout").set("Cookie", cookie);
+    expect(loggedOut.status).toBe(200);
+    const after = await request(app).get("/api/auth/me").set("Cookie", cookie);
+    expect(after.status).toBe(401);
+  });
 });

@@ -1,18 +1,20 @@
 import styled from "styled-components";
 import { Plus, X } from "lucide-react";
 import { Input, Textarea } from "../ui/Input";
+import { useConfirm } from "../../context/ConfirmContext";
 
 /**
  * Friendly key/value editor that replaces raw-JSON editing for a page's
  * structured `content`. Each row is a labelled field name + a multiline value.
  */
 export function FieldsEditor({ value = {}, onChange, addLabel = "Add field" }) {
+  const { confirmRemove } = useConfirm();
   const entries = Object.entries(value);
 
   const rebuild = (next) => onChange(Object.fromEntries(next));
   const setKey = (i, k) => rebuild(entries.map((e, idx) => (idx === i ? [k, e[1]] : e)));
   const setVal = (i, v) => rebuild(entries.map((e, idx) => (idx === i ? [e[0], v] : e)));
-  const remove = (i) => rebuild(entries.filter((_, idx) => idx !== i));
+  const remove = async (i) => (await confirmRemove(`field “${entries[i]?.[0] || i + 1}”`)) && rebuild(entries.filter((_, idx) => idx !== i));
   const add = () => {
     let name = "field";
     let n = 1;

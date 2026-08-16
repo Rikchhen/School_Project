@@ -25,10 +25,11 @@ export function AuthProvider({ children }) {
     };
   }, []);
 
-  const login = useCallback(async (email, password) => {
-    const res = await api.post("/auth/login", { email, password });
+  const login = useCallback(async (email, password, twoFactorCode) => {
+    const res = await api.post("/auth/login", { email, password, ...(twoFactorCode ? { twoFactorCode } : {}) });
+    if (res.requiresTwoFactor) return res;
     setAdmin(res.admin);
-    return res.admin;
+    return res;
   }, []);
 
   const logout = useCallback(async () => {

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import styled from "styled-components";
-import { Send, MapPin, Phone, Mail, Clock } from "lucide-react";
+import { Send, MapPin, Phone, Mail, Clock, ExternalLink } from "lucide-react";
 import { useLang } from "../context/LanguageContext";
 import { useSettings } from "../context/SettingsContext";
 import { useToast } from "../context/ToastContext";
@@ -14,6 +14,17 @@ import { Reveal } from "../components/Reveal";
 import { validateFields, required, minLen, email } from "../lib/validate";
 
 const EMPTY = { name: "", email: "", phone: "", subject: "", message: "" };
+
+// Default Google Maps embed for the school (Shree Aadarsha Rastriya Madhyamik
+// Bidhyalaya, Lalgadh). Used when an admin hasn't set a custom map URL in
+// Settings → Contact. Admin `mapUrl` still overrides this.
+const SCHOOL_MAP_EMBED =
+  "https://www.google.com/maps/embed?pb=!1m18!1m12!1m3!1d18396.850170932164!2d85.90439390793993!3d26.97603674975984!2m3!1f0!2f0!3f0!3m2!1i1024!2i768!4f13.1!3m3!1m2!1s0x39ec73bc974f0b19%3A0x176df90870053d8c!2zU2hyZWUgQWFkYXJzaGEgUmFzdHJpeWUgTWFkaHlhbWlrIEJpZGh5YWxheWUo4KS24KWN4KSw4KWAIOCkhuCkpuCksOCljeCktiDgpLDgpL7gpLfgpY3gpJ_gpY3gpLDgpL_gpK8g4KSu4KS-4KSn4KWN4KSv4KSu4KS_4KSVIOCkteCkv-CkpuCljeCkr-CkvuCksuCkryk!5e0!3m2!1sen!2snp!4v1786884866803!5m2!1sen!2snp";
+
+// Full Google Maps page for the school pin — opened when the user clicks
+// the map. Built from the embed's lat/lng.
+const SCHOOL_MAP_LINK =
+  "https://www.google.com/maps/search/?api=1&query=26.97603674975984,85.90439390793993";
 const RULES = {
   name: [required("Name"), minLen(2, "Name")],
   email: [required("Email"), email()],
@@ -77,14 +88,25 @@ export function Contact() {
                   </InfoRow>
                 );
               })}
-              {c.mapUrl ? (
-                <MapFrame
-                  src={c.mapUrl}
-                  title="School location map"
-                  loading="lazy"
-                  referrerPolicy="no-referrer-when-downgrade"
-                  allowFullScreen
-                />
+              {(c.mapUrl || SCHOOL_MAP_EMBED) ? (
+                <MapWrap>
+                  <MapFrame
+                    src={c.mapUrl || SCHOOL_MAP_EMBED}
+                    title="School location map"
+                    loading="lazy"
+                    referrerPolicy="strict-origin-when-cross-origin"
+                  />
+                  {/* Full-map click target → opens Google Maps in a new tab. */}
+                  <MapClick
+                    href={c.mapLink || SCHOOL_MAP_LINK}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    aria-label="Open school location in Google Maps"
+                    title="Open in Google Maps"
+                  >
+                    <span><MapPin size={16} /> View on Google Maps <ExternalLink size={14} /></span>
+                  </MapClick>
+                </MapWrap>
               ) : (
                 <MapEmbed aria-hidden>
                   <MapPin size={22} /> {pickLang(c, "address") || t("contact.address")}
@@ -146,11 +168,38 @@ const InfoRow = styled.div`
          background: ${({ theme }) => theme.colors.primarySoft}; color: ${({ theme }) => theme.colors.primary}; }
   p { color: ${({ theme }) => theme.colors.textBody}; }
 `;
-const MapFrame = styled.iframe`
-  width: 100%; min-height: 220px; border: 0;
+const MapWrap = styled.div`
+  position: relative;
   margin-top: ${({ theme }) => theme.space[4]};
   border-radius: ${({ theme }) => theme.radii.lg};
+  overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  box-shadow: ${({ theme }) => theme.shadows.sm};
+`;
+const MapFrame = styled.iframe`
+  width: 100%; min-height: 320px; border: 0; display: block;
+  /* Non-interactive: the overlay below owns clicks so the whole map opens Maps. */
+  pointer-events: none;
+`;
+const MapClick = styled.a`
+  position: absolute; inset: 0; z-index: 1;
+  display: grid; place-items: center;
+  cursor: pointer; text-decoration: none;
+  background: transparent;
+  transition: background ${({ theme }) => theme.transitions.base};
+  span {
+    display: inline-flex; align-items: center; gap: 8px;
+    background: ${({ theme }) => theme.colors.surface};
+    color: ${({ theme }) => theme.colors.primary};
+    padding: 8px 16px; border-radius: ${({ theme }) => theme.radii.pill};
+    font-size: ${({ theme }) => theme.fontSizes.sm}; font-weight: 700;
+    box-shadow: ${({ theme }) => theme.shadows.md};
+    opacity: 0; transform: translateY(6px);
+    transition: opacity ${({ theme }) => theme.transitions.base}, transform ${({ theme }) => theme.transitions.base};
+  }
+  span svg:last-child { opacity: 0.7; }
+  &:hover { background: rgba(0,0,0,0.14); }
+  &:hover span, &:focus-visible span { opacity: 1; transform: none; }
 `;
 const MapEmbed = styled.div`
   margin-top: ${({ theme }) => theme.space[4]};

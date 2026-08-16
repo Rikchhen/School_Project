@@ -33,7 +33,29 @@ const settingsSchema = new Schema(
       whatsapp: { type: String, default: "" },
     },
     donationEnabled: { type: Boolean, default: false },
+    // Hero background image/video opacity (0–1). Admin-controlled; 1 = fully clear.
+    heroOpacity: { type: Number, default: 1, min: 0, max: 1 },
     banners: { type: [bannerSchema], default: [] },
+
+    // Full-screen interstitial ad / popup shown to public visitors. Admin can
+    // set a poster image and/or text, an optional CTA, and how often it shows.
+    interstitial: {
+      enabled: { type: Boolean, default: false },
+      imageUrl: { type: String, default: "" },
+      videoUrl: { type: String, default: "" },
+      title: { type: String, default: "" },
+      titleNe: { type: String, default: "" },
+      body: { type: String, default: "" },
+      bodyNe: { type: String, default: "" },
+      ctaLabel: { type: String, default: "" },
+      ctaLabelNe: { type: String, default: "" },
+      ctaLink: { type: String, default: "" },
+      frequency: {
+        type: String,
+        enum: ["session", "daily", "always"],
+        default: "session",
+      },
+    },
 
     // Slim announcement/top bar (admin-editable).
     announcement: {

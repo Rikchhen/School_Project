@@ -10,6 +10,7 @@ import uploadRoutes from "./uploadRoutes";
 import committeeRoutes from "./committeeRoutes";
 import programRoutes from "./programRoutes";
 import settingsRoutes from "./settingsRoutes";
+import securityRoutes from "./securityRoutes";
 
 const router = Router();
 
@@ -27,6 +28,7 @@ router.use("/submissions", submissionRoutes);
 router.use("/committee", committeeRoutes);
 router.use("/programs", programRoutes);
 router.use("/settings", settingsRoutes);
+router.use("/security", securityRoutes);
 router.use("/uploads-file", uploadRoutes);
 
 export default router;

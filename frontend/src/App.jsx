@@ -35,6 +35,7 @@ const ManagePrograms = lazy(() => import("./pages/admin/ManagePrograms").then((m
 const ManagePages = lazy(() => import("./pages/admin/ManagePages").then((m) => ({ default: m.ManagePages })));
 const ManageDonation = lazy(() => import("./pages/admin/ManageDonation").then((m) => ({ default: m.ManageDonation })));
 const ManageSettings = lazy(() => import("./pages/admin/ManageSettings").then((m) => ({ default: m.ManageSettings })));
+const ManageAds = lazy(() => import("./pages/admin/ManageAds").then((m) => ({ default: m.ManageAds })));
 const Inbox = lazy(() => import("./pages/admin/Inbox").then((m) => ({ default: m.Inbox })));
 
 const PUBLIC_ROUTES = {
@@ -62,6 +63,7 @@ const ADMIN_ROUTES = {
   "/admin/pages": ManagePages,
   "/admin/donation": ManageDonation,
   "/admin/settings": ManageSettings,
+  "/admin/ads": ManageAds,
   "/admin/inbox": Inbox,
 };
 

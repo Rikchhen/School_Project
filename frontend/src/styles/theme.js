@@ -57,12 +57,12 @@ const gradients = {
 };
 
 const fonts = {
-  // Scholarly serif for headings (academic/institutional feel).
-  heading: `'Crimson Pro', Georgia, 'Times New Roman', serif`,
-  // Atkinson Hyperlegible — engineered for maximum legibility/accessibility.
-  body: `'Atkinson Hyperlegible', 'Inter', 'Segoe UI', system-ui, sans-serif`,
+  // Poppins — friendly, modern geometric sans for headings (approachable feel).
+  heading: `'Poppins', 'Plus Jakarta Sans', 'Segoe UI', system-ui, sans-serif`,
+  // Plus Jakarta Sans — modern, highly readable humanist sans for body & UI.
+  body: `'Plus Jakarta Sans', 'Inter', 'Segoe UI', system-ui, sans-serif`,
   // Devanagari for Nepali text — stacked after Latin fonts.
-  nepali: `'Noto Sans Devanagari', 'Atkinson Hyperlegible', 'Inter', system-ui, sans-serif`,
+  nepali: `'Noto Sans Devanagari', 'Plus Jakarta Sans', 'Inter', system-ui, sans-serif`,
 };
 
 const fontSizes = {

@@ -19,8 +19,17 @@ export const updateSettings = asyncHandler(async (req: Request, res: Response) =
   if (typeof body.donationEnabled === "boolean") {
     current.donationEnabled = body.donationEnabled;
   }
+  if (typeof body.heroOpacity === "number") {
+    current.heroOpacity = body.heroOpacity;
+  }
   if (Array.isArray(body.banners)) {
     current.banners = body.banners as never;
+  }
+  if (body.interstitial) {
+    current.set("interstitial", {
+      ...(current.interstitial as object),
+      ...(body.interstitial as object),
+    });
   }
   if (body.announcement) {
     current.set("announcement", {

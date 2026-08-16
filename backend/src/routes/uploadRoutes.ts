@@ -1,7 +1,7 @@
 import { Router } from "express";
 import { uploadFile, uploadFiles } from "../controllers/uploadController";
 import { protect, requireRole } from "../middleware/auth";
-import { upload } from "../middleware/upload";
+import { scanFilesForMalware, upload, verifyFileSignatures } from "../middleware/upload";
 
 const router = Router();
 
@@ -11,6 +11,8 @@ router.post(
   protect,
   requireRole("admin", "editor"),
   upload.single("file"),
+  verifyFileSignatures,
+  scanFilesForMalware,
   uploadFile
 );
 
@@ -20,6 +22,8 @@ router.post(
   protect,
   requireRole("admin", "editor"),
   upload.array("files", 12),
+  verifyFileSignatures,
+  scanFilesForMalware,
   uploadFiles
 );
 

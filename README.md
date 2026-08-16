@@ -60,7 +60,7 @@ cp .env.example .env        # then edit values as needed (Windows: copy .env.exa
 | `NODE_ENV`          | `development` \| `production` \| `test`             | `development`                             |
 | `MONGO_URL`         | MongoDB connection string                           | `mongodb://127.0.0.1:27017/adarsha_school`|
 | `JWT_SECRET_TOKEN`  | Secret used to sign auth JWTs (use a long random)   | `openssl rand -hex 32`                    |
-| `JWT_EXPIRES_IN`    | Token lifetime                                      | `7d`                                      |
+| `JWT_EXPIRES_IN`    | Token lifetime                                      | `30m`                                     |
 | `COOKIE_NAME`       | Name of the httpOnly auth cookie                    | `adarsha_token`                           |
 | `CLIENT_URL`        | Frontend origin (CORS + socket.io)                  | `http://localhost:5173`                   |
 | `SEED_ADMIN_EMAIL`    | Email for the seeded admin                         | `admin@adarsha.edu.np`                    |
@@ -245,6 +245,30 @@ httpOnly cookie**.
 ---
 
 ## Uploads & production note
+
+### HTTPS is required in production
+
+Deploy the app behind a TLS-terminating reverse proxy or hosting platform and
+serve the public site only over HTTPS. When `NODE_ENV=production`, Helmet sends
+an HSTS header (`max-age=31536000; includeSubDomains`). HSTS is intentionally
+disabled during local HTTP development.
+
+### Production security configuration
+
+- Set unique secrets of at least 32 characters for `JWT_SECRET_TOKEN` and
+  `DONOR_DOCUMENT_KEY`; production startup fails closed if either is unsafe.
+- Set `TRUST_PROXY=1` only when Express is directly behind one trusted reverse
+  proxy. This is required for accurate client IPs, secure cookies, and limits.
+- Set `CLAMAV_ENABLED=true` and optionally `CLAMAV_COMMAND=clamdscan` when a
+  ClamAV daemon/scanner is installed. Uploads fail closed if scanning fails.
+- `DONOR_RETENTION_DAYS` defaults to 90. Expired donor files are erased while
+  the non-sensitive inbox record remains for accountability.
+- Keep MongoDB on a private interface, use a least-privilege database account,
+  run Node as an unprivileged OS user, and firewall the API behind the proxy.
+- Store secrets in the hosting provider's secret manager, never in the image or
+  repository. Back up MongoDB with encryption and regularly test restoration.
+- Terminate modern TLS at the reverse proxy/platform and redirect HTTP to HTTPS
+  there. Monitor process health, authentication failures, and security audits.
 
 Uploaded files (gallery photos, staff pics, notice PDFs) are stored in
 `backend/uploads/` and served statically at `/uploads/...`.

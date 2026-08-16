@@ -13,6 +13,11 @@ const adminSchema = new Schema(
     },
     passwordHash: { type: String, required: true, select: false },
     role: { type: String, enum: ["admin", "editor"], default: "admin" },
+    tokenVersion: { type: Number, default: 0 },
+    twoFactorEnabled: { type: Boolean, default: false },
+    twoFactorSecret: { type: String, default: "", select: false },
+    twoFactorPendingSecret: { type: String, default: "", select: false },
+    recoveryCodeHashes: { type: [String], default: [], select: false },
   },
   { timestamps: true }
 );
@@ -21,6 +26,9 @@ const adminSchema = new Schema(
 adminSchema.set("toJSON", {
   transform: (_doc, ret: Record<string, unknown>) => {
     delete ret.passwordHash;
+    delete ret.twoFactorSecret;
+    delete ret.twoFactorPendingSecret;
+    delete ret.recoveryCodeHashes;
     delete ret.__v;
     return ret;
   },

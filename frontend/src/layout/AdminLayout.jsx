@@ -22,6 +22,7 @@ const ITEMS = [
   { to: "/admin/pages", key: "managePages", icon: FileText },
   { to: "/admin/donation", key: "manageDonation", icon: HandCoins },
   { to: "/admin/settings", key: "settings", icon: SettingsIcon },
+  { to: "/admin/ads", key: "manageAds", label: "Ad / Popup", icon: Megaphone },
   { to: "/admin/inbox", key: "inbox", icon: Inbox },
 ];
 
@@ -53,7 +54,7 @@ export function AdminLayout({ children }) {
             const Icon = item.icon;
             return (
               <NavItem key={item.to} to={item.to} $active={active(item)} onClick={() => setOpen(false)}>
-                <Icon size={18} /> {t(`admin.${item.key}`)}
+                <Icon size={18} /> {item.label ?? t(`admin.${item.key}`)}
               </NavItem>
             );
           })}

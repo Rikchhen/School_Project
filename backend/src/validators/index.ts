@@ -12,8 +12,11 @@ export const loginSchema = z.object({
   body: z.object({
     email: z.string().trim().toLowerCase().pipe(z.string().email()),
     password: z.string().min(1, "Password is required"),
+    twoFactorCode: z.string().min(6).max(32).optional(),
   }),
 });
+export const twoFactorCodeSchema = z.object({ body: z.object({ code: z.string().regex(/^\d{6}$/) }) });
+export const disableTwoFactorSchema = z.object({ body: z.object({ password: z.string().min(1) }) });
 
 /** ---------------- Notices ---------------- */
 export const createNoticeSchema = z.object({
@@ -163,19 +166,31 @@ export const admissionSubmissionSchema = z.object({
     message: z.string().min(5).max(5000),
   }),
 });
+// Donor identity/verification submitted before the donation QRs are shown.
+// Sent as multipart/form-data with a `document` file; text fields validated here.
+export const donationSubmissionSchema = z.object({
+  body: z.object({
+    name: z.string().min(2).max(120),
+    email: z.string().email(),
+    phone: z.string().max(40).optional().default(""),
+    message: z.string().max(5000).optional().default(""),
+  }),
+});
 export const listSubmissionSchema = z.object({
   query: z.object({
     page: z.coerce.number().int().positive().optional(),
     limit: z.coerce.number().int().positive().max(100).optional(),
-    type: z.enum(["contact", "admission"]).optional(),
+    type: z.enum(["contact", "admission", "donation"]).optional(),
     status: z.enum(["new", "read", "archived"]).optional(),
   }),
 });
 export const updateSubmissionSchema = z.object({
   params: z.object({ id: objectId }),
   body: z.object({
-    status: z.enum(["new", "read", "archived"]),
-  }),
+    status: z.enum(["new", "read", "archived"]).optional(),
+    reviewStatus: z.enum(["pending", "approved", "rejected"]).optional(),
+    reviewNote: z.string().trim().max(1000).optional(),
+  }).refine((body) => body.status || body.reviewStatus || body.reviewNote !== undefined, "No update provided"),
 });
 
 /** ---------------- Programs ---------------- */
@@ -247,7 +262,24 @@ export const updateSettingsSchema = z.object({
       .partial()
       .optional(),
     donationEnabled: z.coerce.boolean().optional(),
+    heroOpacity: z.coerce.number().min(0).max(1).optional(),
     banners: z.array(bannerInput).optional(),
+    interstitial: z
+      .object({
+        enabled: z.coerce.boolean().optional(),
+        imageUrl: z.string().optional(),
+        videoUrl: z.string().optional(),
+        title: z.string().optional(),
+        titleNe: z.string().optional(),
+        body: z.string().optional(),
+        bodyNe: z.string().optional(),
+        ctaLabel: z.string().optional(),
+        ctaLabelNe: z.string().optional(),
+        ctaLink: z.string().optional(),
+        frequency: z.enum(["session", "daily", "always"]).optional(),
+      })
+      .partial()
+      .optional(),
     announcement: z
       .object({
         enabled: z.coerce.boolean().optional(),
