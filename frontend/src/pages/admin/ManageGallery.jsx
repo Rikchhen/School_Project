@@ -10,6 +10,11 @@ import { useToast } from "../../context/ToastContext";
 
 const ALBUMS = ["general", "campus", "events", "sports", "academics", "cultural"];
 
+export function galleryTitleFromFilename(filename, index = 0) {
+  const title = (filename || "").replace(/\.[^.]+$/, "").trim();
+  return title.length >= 3 ? title : `Photo ${index + 1}`;
+}
+
 const config = {
   title: "Gallery",
   endpoint: "/gallery",
@@ -49,9 +54,9 @@ function BulkUpload({ onDone }) {
     try {
       const res = await api.post("/uploads-file/multiple", form);
       await Promise.all(
-        (res.files || []).map((f) =>
+        (res.files || []).map((f, index) =>
           api.post("/gallery", {
-            title: (f.originalName || "Photo").replace(/\.[^.]+$/, ""),
+            title: galleryTitleFromFilename(f.originalName, index),
             imageUrl: f.url,
             album,
             published: true,

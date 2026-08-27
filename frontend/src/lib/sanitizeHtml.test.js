@@ -18,6 +18,19 @@ describe("sanitizeHtml", () => {
     const bad = sanitizeHtml('<a href="javascript:alert(1)">x</a>');
     expect(bad).not.toContain("javascript:");
   });
+  it("decodes and sanitizes legacy escaped rich text", () => {
+    const out = sanitizeHtml("&lt;b&gt;Bold&lt;/b&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;");
+    expect(out).toContain("<b>Bold</b>");
+    expect(out).toContain("<br>");
+    expect(out).not.toContain("&lt;b&gt;");
+  });
+  it("allows plain font sizes and rejects unsafe or arbitrary values", () => {
+    const out = sanitizeHtml('<span style="font-size: 24px; color: #b90035">Safe</span><span style="font-size: calc(1px + 2vw)">Bad</span><span style="font-size: url(x)">Bad</span>');
+    expect(out).toContain("font-size: 24px");
+    expect(out).toContain("color: #b90035");
+    expect(out).not.toContain("calc(");
+    expect(out).not.toContain("url(");
+  });
 });
 
 describe("htmlToText", () => {

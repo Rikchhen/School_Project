@@ -1,10 +1,13 @@
 import { useCallback, useEffect, useState } from "react";
 import styled, { keyframes, css } from "styled-components";
 import { motion, AnimatePresence, useReducedMotion } from "framer-motion";
-import { ChevronLeft, ChevronRight, ChevronDown } from "lucide-react";
+import { ChevronLeft, ChevronRight, ChevronDown, ArrowRight } from "lucide-react";
+import { Link } from "../lib/router";
 import { useLang } from "../context/LanguageContext";
 import { useSettings } from "../context/SettingsContext";
 import { formatNumber } from "../lib/format";
+import { Container } from "./ui/Layout";
+import { Button } from "./ui/Button";
 import { kenBurns, scrollCue } from "../styles/animations";
 import heroImg from "../assets/images/hero.png";
 
@@ -13,12 +16,12 @@ import heroImg from "../assets/images/hero.png";
  * - Crossfade between slides (framer AnimatePresence).
  * - Ken Burns zoom on the background photo; image opacity is admin-controlled
  *   (Settings → Hero image opacity), default fully opaque.
- * - Image/video only — no text overlay; floating stat cards idle-float and animate in.
+ * - Admin-authored headline, subtitle, and CTA overlay the background media.
  * Slides come from admin Settings; falls back to a single default slide.
  * Pauses on hover/focus and respects prefers-reduced-motion.
  */
 export function HeroCarousel({ slides = [], stats = [] }) {
-  const { pickLang, lang } = useLang();
+  const { pickLang, t, lang } = useLang();
   const { settings } = useSettings();
   const heroOpacity = typeof settings.heroOpacity === "number" ? settings.heroOpacity : 1;
   const reduce = useReducedMotion();
@@ -43,6 +46,15 @@ export function HeroCarousel({ slides = [], stats = [] }) {
   }, [paused, reduce, list.length]);
 
   const slide = list[index];
+  const title = slide ? pickLang(slide, "title") : t("home.heroTitle");
+  const subtitle = slide ? pickLang(slide, "subtitle") : t("home.heroSubtitle");
+  const ctaLabel = slide ? pickLang(slide, "ctaLabel") : t("home.ctaAdmissions");
+  const ctaLink = slide?.ctaLink || "/admissions";
+  const copyContainer = { hidden: {}, show: { transition: { staggerChildren: 0.12, delayChildren: 0.15 } } };
+  const copyItem = {
+    hidden: { opacity: 0, y: 24 },
+    show: { opacity: 1, y: 0, transition: { type: "spring", stiffness: 90, damping: 16 } },
+  };
 
   return (
     <Hero
@@ -63,12 +75,27 @@ export function HeroCarousel({ slides = [], stats = [] }) {
           aria-hidden
         >
           {slide?.videoUrl ? (
-            <BgVideo src={slide.videoUrl} autoPlay muted loop playsInline $opacity={heroOpacity} />
+            <BgVideo src={slide.videoUrl} poster={slide.imageUrl || heroImg} autoPlay muted loop playsInline preload="metadata" $opacity={heroOpacity} />
           ) : (
             <Bg $ken={!reduce} $opacity={heroOpacity} src={slide?.imageUrl || heroImg} alt="" onError={(e) => { e.currentTarget.src = heroImg; }} />
           )}
         </BgLayer>
       </AnimatePresence>
+      <Fade />
+
+      <CopyContainer>
+        <Inner as={motion.div} key={`copy-${index}`} variants={copyContainer} initial="hidden" animate="show">
+          {title && <motion.h1 variants={copyItem}>{title}</motion.h1>}
+          {subtitle && <motion.p variants={copyItem}>{subtitle}</motion.p>}
+          {ctaLabel && (
+            <motion.div variants={copyItem} whileHover={{ scale: 1.04 }} whileTap={{ scale: 0.97 }}>
+              <CtaButton as={Link} to={ctaLink} $variant="primary" $size="lg">
+                {ctaLabel} <ArrowRight size={18} />
+              </CtaButton>
+            </motion.div>
+          )}
+        </Inner>
+      </CopyContainer>
 
       {/* Floating stat cards */}
       <HeroStats aria-hidden>
@@ -129,6 +156,22 @@ const BgVideo = styled.video`
   position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
   opacity: ${({ $opacity }) => ($opacity ?? 1)};
 `;
+const Fade = styled.div`
+  position: absolute; inset: 0; z-index: 1; pointer-events: none;
+  background: linear-gradient(90deg, rgba(10,15,25,.78) 0%, rgba(10,15,25,.48) 48%, rgba(10,15,25,.08) 78%);
+`;
+const CopyContainer = styled(Container)`
+  position: relative; z-index: 2; height: 100%; display: flex; align-items: center;
+`;
+const Inner = styled.div`
+  width: min(640px, calc(100% - 210px)); display: flex; flex-direction: column; align-items: flex-start;
+  gap: ${({ theme }) => theme.space[4]}; text-shadow: 0 2px 16px rgba(0,0,0,.45);
+  h1 { color: #fff; font-size: clamp(2.15rem, 5vw, 3.5rem); line-height: 1.12; max-width: 18ch; }
+  p { color: rgba(255,255,255,.92); font-size: ${({ theme }) => theme.fontSizes.lg}; line-height: 1.65; max-width: 52ch; }
+  ${({ theme }) => theme.media.laptop(`width: min(680px, 88%);`)}
+  ${({ theme }) => theme.media.mobile(`width: 100%; h1 { font-size: 2rem; } p { font-size: 1rem; }`)}
+`;
+const CtaButton = styled(Button)`margin-top: ${({ theme }) => theme.space[2]}; text-shadow: none;`;
 const HeroStats = styled.div`
   position: absolute; right: 76px; top: 50%; transform: translateY(-50%);
   display: flex; flex-direction: column; gap: ${({ theme }) => theme.space[3]}; z-index: 3;

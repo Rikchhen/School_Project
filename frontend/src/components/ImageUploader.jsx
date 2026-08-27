@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
-import styled from "styled-components";
-import { UploadCloud, Loader2 } from "lucide-react";
+import styled, { keyframes } from "styled-components";
+import { UploadCloud, Loader2, CheckCircle2 } from "lucide-react";
 import { api } from "../lib/api";
 import { useToast } from "../context/ToastContext";
 import { SmartImage } from "./SmartImage";
@@ -14,6 +14,8 @@ import { ImageCropper } from "./admin/ImageCropper";
 export function ImageUploader({ value, onUploaded, accept = "image/*", label = "Upload file", required = false }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
+  const [progress, setProgress] = useState(0);
+  const [complete, setComplete] = useState(false);
   const [cropFile, setCropFile] = useState(null); // image awaiting crop
   const toast = useToast();
 
@@ -22,14 +24,19 @@ export function ImageUploader({ value, onUploaded, accept = "image/*", label = "
     const form = new FormData();
     form.append("file", file);
     setUploading(true);
+    setProgress(1);
+    setComplete(false);
     try {
-      const res = await api.post("/uploads-file", form);
+      const res = await api.upload("/uploads-file", form, { onProgress: setProgress });
+      setProgress(100);
+      setComplete(true);
       onUploaded?.(res.url, res);
       toast.success("File uploaded");
     } catch (err) {
       toast.error(err.message || "Upload failed");
     } finally {
       setUploading(false);
+      window.setTimeout(() => setComplete(false), 1800);
     }
   };
 
@@ -53,12 +60,15 @@ export function ImageUploader({ value, onUploaded, accept = "image/*", label = "
         onClick={() => inputRef.current?.click()}
         disabled={uploading}
       >
-        {uploading ? (
-          <><Loader2 size={20} className="spin" /> Uploading…</>
+        {complete ? (
+          <><CheckCircle2 size={20} className="success" /> Uploaded</>
+        ) : uploading ? (
+          <><Loader2 size={20} className="spin" /> Uploading… {progress}%</>
         ) : (
           <><UploadCloud size={20} /> {label}</>
         )}
       </Drop>
+      {uploading && <Progress aria-label={`Upload progress ${progress}%`}><span style={{ transform: `scaleX(${progress / 100})` }} /></Progress>}
       <input
         ref={inputRef}
         type="file"
@@ -109,7 +119,14 @@ const Drop = styled.button`
   font-size: ${({ theme }) => theme.fontSizes.sm};
   &:disabled { opacity: 0.7; }
   .spin { animation: spin 1s linear infinite; }
+  .success { animation: successPop .38s cubic-bezier(.22,1,.36,1) both; color:${({theme})=>theme.colors.success}; }
   @keyframes spin { to { transform: rotate(360deg); } }
+  @keyframes successPop { from { opacity:0; transform:scale(.65) } to { opacity:1; transform:none } }
+`;
+
+const Progress = styled.div`
+  height:4px; overflow:hidden; border-radius:${({theme})=>theme.radii.pill}; background:${({theme})=>theme.colors.border};
+  span{display:block;width:100%;height:100%;transform-origin:left;background:${({theme})=>theme.gradients.primary};transition:transform .16s linear;}
 `;
 
 const Preview = styled.div`
@@ -117,6 +134,7 @@ const Preview = styled.div`
   border-radius: ${({ theme }) => theme.radii.md};
   overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  animation:${keyframes`from{opacity:0;transform:scale(.97)}to{opacity:1;transform:none}`} .35s ease-out both;
 `;
 
 const FileLink = styled.a`

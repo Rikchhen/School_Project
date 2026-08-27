@@ -25,7 +25,7 @@ export function Committee() {
           {chair && (pickLang(chair, "message")) && (
             <Reveal>
               <MessageCard>
-                <Photo><SmartImage src={chair.photoUrl} alt={pickLang(chair, "name")} height="180px" /></Photo>
+                <Photo><SmartImage src={chair.photoUrl} alt={pickLang(chair, "name")} height="200px" fit="contain" /></Photo>
                 <div>
                   <Quote size={28} />
                   <p>{pickLang(chair, "message")}</p>
@@ -47,7 +47,7 @@ export function Committee() {
               {members.map((m, i) => (
                 <Reveal key={m._id} delay={i * 60}>
                   <MemberCard $hover $pad={0}>
-                    <MPhoto><SmartImage src={m.photoUrl} alt={pickLang(m, "name")} height="240px" /></MPhoto>
+                    <MPhoto><SmartImage src={m.photoUrl} alt={pickLang(m, "name")} height="260px" fit="contain" /></MPhoto>
                     <Info>
                       <h3>{pickLang(m, "name")}</h3>
                       <Role>{pickLang(m, "role")}</Role>
@@ -77,7 +77,7 @@ const MessageCard = styled(Card)`
   span { color: ${({ theme }) => theme.colors.primary}; font-size: ${({ theme }) => theme.fontSizes.sm}; }
   ${({ theme }) => theme.media.tablet(`grid-template-columns: 1fr;`)}
 `;
-const Photo = styled.div`border-radius: ${({ theme }) => theme.radii.lg}; overflow: hidden; border: 1px solid ${({ theme }) => theme.colors.border};`;
+const Photo = styled.div`border-radius: ${({ theme }) => theme.radii.lg}; overflow: hidden; border: 1px solid ${({ theme }) => theme.colors.border}; background: ${({ theme }) => theme.colors.surfaceAlt};`;
 const MemberCard = styled(Card)`overflow: hidden;`;
 const MPhoto = styled.div`background: ${({ theme }) => theme.colors.surfaceAlt};`;
 const Info = styled.div`

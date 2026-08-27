@@ -16,6 +16,9 @@ export const GlobalStyle = createGlobalStyle`
     -webkit-font-smoothing: antialiased;
     text-rendering: optimizeLegibility;
     min-height: 100vh;
+    /* Long words / URLs / emails must wrap rather than push the layout wide on
+       narrow phones. */
+    overflow-wrap: break-word;
     transition: background-color 0.3s ease, color 0.3s ease;
   }
 
@@ -35,7 +38,7 @@ export const GlobalStyle = createGlobalStyle`
 
   a { color: inherit; text-decoration: none; }
 
-  img, picture, svg, video { display: block; max-width: 100%; }
+  img, picture, svg, video, iframe { display: block; max-width: 100%; }
 
   button, input, textarea, select { font: inherit; color: inherit; }
 

@@ -1,5 +1,5 @@
 import styled from "styled-components";
-import { BookOpen, GraduationCap, Target, Eye, Library, FlaskConical, Trees } from "lucide-react";
+import { BookOpen, GraduationCap, Target, Eye, Library, FlaskConical, Trees, Quote } from "lucide-react";
 import { useLang } from "../context/LanguageContext";
 import { useSettings } from "../context/SettingsContext";
 import { useFetch } from "../lib/useFetch";
@@ -11,6 +11,7 @@ import { RichText } from "../components/RichText";
 import { Reveal } from "../components/Reveal";
 
 const FACILITY_ICONS = { library: Library, lab: FlaskConical, playground: Trees };
+const initials = (name = "") => name.trim().split(/\s+/).slice(0, 2).map((word) => word[0]).join("").toUpperCase() || "•";
 
 export function About() {
   const { t, pickLang } = useLang();
@@ -18,6 +19,9 @@ export function About() {
   const { data } = useFetch("/pages/about");
   const page = data?.page;
   const established = page?.content?.established || t("about.establishedLabel");
+  const principal = settings.principal || {};
+  const principalName = pickLang(principal, "name");
+  const principalMessage = pickLang(principal, "message") || t("home.missionBody");
 
   const facilities = settings.facilities && settings.facilities.length
     ? settings.facilities.map((f) => ({
@@ -84,11 +88,22 @@ export function About() {
         <Container>
           <Reveal direction="scale">
             <PrincipalCard>
-              <Photo><SmartImage src="" alt="Principal" height="220px" /></Photo>
-              <div>
+              <PrincipalPhoto>
+                {principal.photoUrl ? (
+                  <SmartImage src={principal.photoUrl} alt={principalName || t("home.principalRole")} height="100%" fit="cover" />
+                ) : (
+                  <PrincipalFallback aria-hidden>
+                    <GraduationCap size={34} />
+                    <FallbackInitials>{initials(principalName)}</FallbackInitials>
+                  </PrincipalFallback>
+                )}
+              </PrincipalPhoto>
+              <PrincipalBody>
+                <Quote size={30} />
                 <h3>{t("about.principalTitle")}</h3>
-                <Body>{t("home.missionBody")}</Body>
-              </div>
+                <PrincipalMessage html={principalMessage} />
+                {principalName && <PrincipalName>{principalName}</PrincipalName>}
+              </PrincipalBody>
             </PrincipalCard>
           </Reveal>
         </Container>
@@ -160,16 +175,43 @@ const IconRound = styled.div`
   background: ${({ theme, $tone }) => ($tone === "primary" ? theme.colors.primarySoft : theme.colors.secondarySoft)};
   color: ${({ theme, $tone }) => ($tone === "primary" ? theme.colors.primary : theme.colors.secondary)};
 `;
-const PrincipalCard = styled(Card)`
-  display: grid; grid-template-columns: 260px 1fr; gap: ${({ theme }) => theme.space[8]};
-  align-items: center; padding: ${({ theme }) => theme.space[8]};
-  border-left: 4px solid ${({ theme }) => theme.colors.secondary};
-  h3 { margin-bottom: ${({ theme }) => theme.space[3]}; color: ${({ theme }) => theme.colors.primary}; }
-  ${({ theme }) => theme.media.tablet(`grid-template-columns: 1fr;`)}
+const PrincipalCard = styled.div`
+  display: grid; grid-template-columns: 260px 1fr; gap: ${({ theme }) => theme.space[8]}; align-items: center;
+  background: ${({ theme }) => theme.colors.surface}; border: 1px solid ${({ theme }) => theme.colors.border};
+  border-left: 5px solid ${({ theme }) => theme.colors.secondary};
+  border-radius: ${({ theme }) => theme.radii.xl}; padding: ${({ theme }) => theme.space[8]}; box-shadow: ${({ theme }) => theme.shadows.md};
+  ${({ theme }) => theme.media.tablet(`grid-template-columns: 1fr; text-align: center; padding: 1.75rem;`)}
 `;
-const Photo = styled.div`
-  border-radius: ${({ theme }) => theme.radii.lg}; overflow: hidden;
+const PrincipalPhoto = styled.div`
+  width: 100%; aspect-ratio: 4 / 5; border-radius: ${({ theme }) => theme.radii.lg}; overflow: hidden;
   border: 1px solid ${({ theme }) => theme.colors.border};
+  ${({ theme }) => theme.media.tablet(`max-width: 240px; margin-inline: auto;`)}
+`;
+const PrincipalFallback = styled.div`
+  width: 100%; height: 100%; display: grid; place-items: center; gap: 4px; position: relative;
+  color: #fff; background: ${({ theme }) => theme.gradients.secondary};
+  svg { opacity: 0.9; }
+`;
+const FallbackInitials = styled.span`
+  font-family: ${({ theme }) => theme.fonts.heading}; font-weight: 800;
+  font-size: ${({ theme }) => theme.fontSizes.xl}; letter-spacing: 1px;
+`;
+const PrincipalBody = styled.div`
+  min-width: 0;
+  svg { color: ${({ theme }) => theme.colors.secondary}; margin-bottom: ${({ theme }) => theme.space[2]}; }
+  h3 { font-size: ${({ theme }) => theme.fontSizes["2xl"]}; color: ${({ theme }) => theme.colors.primary}; margin-bottom: ${({ theme }) => theme.space[3]}; }
+  ${({ theme }) => theme.media.tablet(`svg { margin-inline: auto; }`)}
+`;
+const PrincipalMessage = styled(RichText)`
+  p, ul, ol, blockquote { margin-bottom: ${({ theme }) => theme.space[3]}; }
+  > :last-child { margin-bottom: 0; }
+  h2, h3, h4 { color: ${({ theme }) => theme.colors.text}; }
+`;
+const PrincipalName = styled.strong`
+  display: block;
+  margin-top: ${({ theme }) => theme.space[4]};
+  color: ${({ theme }) => theme.colors.text};
+  font-size: ${({ theme }) => theme.fontSizes.lg};
 `;
 const Center = styled.div`
   text-align: center; margin-bottom: ${({ theme }) => theme.space[10]};

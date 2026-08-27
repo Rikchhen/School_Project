@@ -14,6 +14,7 @@ const FONTS = [
   { label: "Georgia", value: "Georgia" },
   { label: "Courier New", value: "Courier New" },
 ];
+const FONT_SIZES = ["12", "14", "16", "20", "24", "32"];
 
 /**
  * Dependency-free rich-text editor built on contentEditable + execCommand.
@@ -22,6 +23,7 @@ const FONTS = [
  */
 export function RichTextEditor({ value, onChange, placeholder = "Write here…" }) {
   const ref = useRef(null);
+  const selectionRef = useRef(null);
 
   // Keep the DOM in sync with the value prop without stealing the caret.
   useEffect(() => {
@@ -37,15 +39,48 @@ export function RichTextEditor({ value, onChange, placeholder = "Write here…" 
     if (ref.current) onChange?.(sanitizeHtml(ref.current.innerHTML));
   };
 
+  const saveSelection = () => {
+    const selection = window.getSelection();
+    if (!selection?.rangeCount || !ref.current) return;
+    const range = selection.getRangeAt(0);
+    if (ref.current.contains(range.commonAncestorContainer)) selectionRef.current = range.cloneRange();
+  };
+
+  const restoreSelection = () => {
+    const range = selectionRef.current;
+    if (!range) return;
+    const selection = window.getSelection();
+    selection.removeAllRanges();
+    selection.addRange(range);
+  };
+
   const exec = (command, arg = null) => {
     ref.current?.focus();
+    restoreSelection();
     document.execCommand(command, false, arg);
+    saveSelection();
     emit();
   };
 
   const addLink = () => {
     const url = window.prompt("Link URL (https://…)");
     if (url) exec("createLink", url);
+  };
+
+  const applyFontSize = (size) => {
+    if (!size) return;
+    ref.current?.focus();
+    restoreSelection();
+    document.execCommand("styleWithCSS", false, true);
+    document.execCommand("fontSize", false, "7");
+    ref.current?.querySelectorAll('font[size="7"]').forEach((font) => {
+      const span = document.createElement("span");
+      span.style.fontSize = `${size}px`;
+      while (font.firstChild) span.appendChild(font.firstChild);
+      font.replaceWith(span);
+    });
+    saveSelection();
+    emit();
   };
 
   const btn = (Icon, label, onClick) => (
@@ -78,10 +113,18 @@ export function RichTextEditor({ value, onChange, placeholder = "Write here…" 
         <Divider />
         {btn(Link2, "Add link", addLink)}
         {btn(RemoveFormatting, "Clear formatting", () => { exec("removeFormat"); exec("formatBlock", "P"); })}
+        <ColorLabel title="Text colour" aria-label="Text colour" onMouseDown={saveSelection}>
+          A<input type="color" defaultValue="#1f2937" onChange={(e) => exec("foreColor", e.target.value)} />
+        </ColorLabel>
+        <FontSelect aria-label="Font size" defaultValue="" onMouseDown={saveSelection}
+          onChange={(e) => { applyFontSize(e.target.value); e.target.value = ""; }}>
+          <option value="">Size</option>
+          {FONT_SIZES.map((size) => <option key={size} value={size}>{size}px</option>)}
+        </FontSelect>
         <FontSelect
           aria-label="Font family"
           defaultValue=""
-          onMouseDown={(e) => e.stopPropagation()}
+          onMouseDown={saveSelection}
           onChange={(e) => { exec("fontName", e.target.value || "inherit"); e.target.value = ""; }}
         >
           {FONTS.map((f) => (
@@ -95,8 +138,10 @@ export function RichTextEditor({ value, onChange, placeholder = "Write here…" 
         contentEditable
         suppressContentEditableWarning
         data-placeholder={placeholder}
-        onInput={emit}
-        onBlur={emit}
+        onInput={() => { saveSelection(); emit(); }}
+        onKeyUp={saveSelection}
+        onMouseUp={saveSelection}
+        onBlur={() => { saveSelection(); emit(); }}
       />
     </Wrap>
   );
@@ -123,13 +168,19 @@ const ToolBtn = styled.button`
   color: ${({ theme }) => theme.colors.textBody};
   &:hover { background: ${({ theme }) => theme.colors.secondarySoft}; color: ${({ theme }) => theme.colors.secondary}; }
 `;
+const ColorLabel = styled.label`
+  width: 32px; height: 32px; position: relative; display: grid; place-items: center;
+  border-radius: ${({ theme }) => theme.radii.sm}; color: ${({ theme }) => theme.colors.textBody};
+  font-weight: 800; font-size: 14px; cursor: pointer;
+  &:hover { background: ${({ theme }) => theme.colors.secondarySoft}; }
+  input { position: absolute; inset: auto 5px 3px; width: 22px; height: 5px; padding: 0; border: 0; opacity: .9; cursor: pointer; }
+`;
 
 const Divider = styled.span`
   width: 1px; height: 20px; background: ${({ theme }) => theme.colors.border}; margin: 0 4px;
 `;
 
 const FontSelect = styled.select`
-  margin-left: auto;
   border: 1px solid ${({ theme }) => theme.colors.border};
   border-radius: ${({ theme }) => theme.radii.sm};
   background: ${({ theme }) => theme.colors.surface};

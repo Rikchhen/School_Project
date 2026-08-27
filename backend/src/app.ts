@@ -33,7 +33,8 @@ export function createApp(): Application {
         useDefaults: true,
         directives: {
           "frame-src": ["'self'", "https://www.google.com", "https://maps.google.com"],
-          "img-src": ["'self'", "data:", "https:"],
+          // Admin image previews use short-lived local blob URLs while cropping.
+          "img-src": ["'self'", "data:", "blob:", "https:"],
         },
       },
     })

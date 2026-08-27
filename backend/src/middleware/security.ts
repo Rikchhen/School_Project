@@ -1,5 +1,5 @@
 import type { RequestHandler } from "express";
-import { env, isTest } from "../config/env";
+import { adminAuthDisabled, env, isTest } from "../config/env";
 import { ApiError } from "../utils/ApiError";
 import { AdminSessionModel } from "../models/AdminSession";
 import { safeEqualHash } from "../utils/security";
@@ -8,6 +8,10 @@ import { verifyToken } from "../utils/jwt";
 
 const SAFE_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 const PUBLIC_MUTATIONS = new Set(["/api/auth/login", "/api/submissions/contact", "/api/submissions/admission", "/api/submissions/donation"]);
+
+export function shouldSkipCsrf(method: string, requestPath: string, testMode = isTest, authDisabled = adminAuthDisabled): boolean {
+  return SAFE_METHODS.has(method) || PUBLIC_MUTATIONS.has(requestPath) || testMode || authDisabled;
+}
 
 export const rejectDangerousKeys: RequestHandler = (req, _res, next) => {
   const visit = (value: unknown): boolean => {
@@ -20,7 +24,9 @@ export const rejectDangerousKeys: RequestHandler = (req, _res, next) => {
 };
 
 export const csrfProtection: RequestHandler = async (req, _res, next) => {
-  if (SAFE_METHODS.has(req.method) || PUBLIC_MUTATIONS.has(req.path) || isTest) return next();
+  // A development auth bypass has no session/CSRF token. Ignore stale login
+  // cookies in this mode; production can never enable adminAuthDisabled.
+  if (shouldSkipCsrf(req.method, req.path)) return next();
   if (!req.cookies?.[env.COOKIE_NAME]) return next();
   const origin = req.get("origin");
   if (origin && origin !== env.CLIENT_URL && origin !== `${req.protocol}://${req.get("host")}`) return next(ApiError.forbidden("Untrusted request origin"));

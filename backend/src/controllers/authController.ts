@@ -3,7 +3,7 @@ import { AdminModel } from "../models/Admin";
 import { ApiError } from "../utils/ApiError";
 import { asyncHandler } from "../utils/asyncHandler";
 import { signToken } from "../utils/jwt";
-import { env, isProd } from "../config/env";
+import { adminAuthDisabled, env, isProd } from "../config/env";
 import { AdminSessionModel } from "../models/AdminSession";
 import { generateTotpSecret, randomToken, sha256, verifyTotp } from "../utils/security";
 import { writeAudit } from "../utils/audit";
@@ -71,6 +71,13 @@ export const logout = asyncHandler(async (req: Request, res: Response) => {
 
 export const me = asyncHandler(async (req: Request, res: Response) => {
   if (!req.admin) throw ApiError.unauthorized();
+  if (adminAuthDisabled) {
+    return res.json({
+      success: true,
+      admin: { id: req.admin.id, name: "Local Administrator", email: "local@development", role: "admin", twoFactorEnabled: false },
+      authDisabled: true,
+    });
+  }
   const admin = await AdminModel.findById(req.admin.id);
   if (!admin) throw ApiError.unauthorized("Account no longer exists");
   const csrfToken = randomToken();

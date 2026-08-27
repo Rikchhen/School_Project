@@ -118,6 +118,7 @@ export const createStaffSchema = z.object({
       ])
       .default("general"),
     bio: z.string().optional().default(""),
+    bioNe: z.string().optional().default(""),
     email: z.string().email().optional().or(z.literal("")).default(""),
     phone: z.string().optional().default(""),
     photoUrl: z.string().optional().default(""),
@@ -201,6 +202,7 @@ export const createProgramSchema = z.object({
     category: z.enum(["science", "management", "humanities", "general"]).default("general"),
     description: z.string().optional().default(""),
     descriptionNe: z.string().optional().default(""),
+    imageUrl: z.string().optional().default(""),
     coreSubjects: z.array(z.string()).optional().default([]),
     keyAreas: z.array(z.string()).optional().default([]),
     accent: z.enum(["primary", "secondary"]).default("primary"),
@@ -212,6 +214,18 @@ export const updateProgramSchema = z.object({
   params: z.object({ id: objectId }),
   body: createProgramSchema.shape.body.partial(),
 });
+
+const syllabusInput = z.object({
+  title: z.string().trim().min(1), titleNe: z.string().optional().default(""),
+  grade: z.string().trim().min(1), subject: z.string().trim().min(1),
+  stream: z.enum(["science", "management", "humanities", "general"]).optional().default("general"),
+  description: z.string().optional().default(""), descriptionNe: z.string().optional().default(""),
+  fileUrl: z.string().optional().default(""), coverImageUrl: z.string().optional().default(""),
+  academicYear: z.string().optional().default(""), order: z.coerce.number().int().optional().default(0),
+  featured: z.coerce.boolean().optional().default(false), published: z.coerce.boolean().optional().default(true),
+});
+export const createSyllabusSchema = z.object({ body: syllabusInput });
+export const updateSyllabusSchema = z.object({ body: syllabusInput.partial(), params: z.object({ id: objectId }) });
 
 /** ---------------- Committee ---------------- */
 export const createCommitteeSchema = z.object({
@@ -263,6 +277,27 @@ export const updateSettingsSchema = z.object({
       .optional(),
     donationEnabled: z.coerce.boolean().optional(),
     heroOpacity: z.coerce.number().min(0).max(1).optional(),
+    branding: z.object({
+      logoUrl: z.string().optional(),
+      logoHeight: z.coerce.number().min(40).max(96).optional(),
+      showLogoRing: z.coerce.boolean().optional(),
+      schoolName: z.string().optional(),
+      schoolNameNe: z.string().optional(),
+      tagline: z.string().optional(),
+      taglineNe: z.string().optional(),
+    }).partial().optional(),
+    principal: z
+      .object({
+        name: z.string().optional(),
+        nameNe: z.string().optional(),
+        role: z.string().optional(),
+        roleNe: z.string().optional(),
+        photoUrl: z.string().optional(),
+        message: z.string().optional(),
+        messageNe: z.string().optional(),
+      })
+      .partial()
+      .optional(),
     banners: z.array(bannerInput).optional(),
     interstitial: z
       .object({
@@ -276,6 +311,22 @@ export const updateSettingsSchema = z.object({
         ctaLabel: z.string().optional(),
         ctaLabelNe: z.string().optional(),
         ctaLink: z.string().optional(),
+        autoAdvance: z.coerce.boolean().optional(),
+        slides: z
+          .array(
+            z.object({
+              imageUrl: z.string().optional().default(""),
+              videoUrl: z.string().optional().default(""),
+              title: z.string().optional().default(""),
+              titleNe: z.string().optional().default(""),
+              body: z.string().optional().default(""),
+              bodyNe: z.string().optional().default(""),
+              ctaLabel: z.string().optional().default(""),
+              ctaLabelNe: z.string().optional().default(""),
+              ctaLink: z.string().optional().default(""),
+            })
+          )
+          .optional(),
         frequency: z.enum(["session", "daily", "always"]).optional(),
       })
       .partial()
@@ -300,6 +351,14 @@ export const updateSettingsSchema = z.object({
         })
       )
       .optional(),
+    navigation: z.array(z.object({
+      label: z.string().optional().default(""), labelNe: z.string().optional().default(""),
+      url: z.string().optional().default(""), external: z.coerce.boolean().optional().default(false),
+      children: z.array(z.object({
+        label: z.string().optional().default(""), labelNe: z.string().optional().default(""),
+        url: z.string().optional().default(""), external: z.coerce.boolean().optional().default(false),
+      })).optional().default([]),
+    })).optional(),
     stats: z
       .array(
         z.object({

@@ -1,8 +1,7 @@
 import { useState } from "react";
-import styled from "styled-components";
+import styled, { keyframes } from "styled-components";
 import {
-  LayoutDashboard, Megaphone, CalendarDays, Images, Users, Users2, BookOpen,
-  FileText, Inbox, LogOut, Menu, X, ExternalLink, Settings as SettingsIcon, HandCoins,
+  LayoutDashboard, LogOut, Menu, X, ExternalLink, ChevronDown,
 } from "lucide-react";
 import { Link, useRouter } from "../lib/router";
 import { ThemeToggle } from "../components/ThemeToggle";
@@ -10,31 +9,19 @@ import { useAuth } from "../context/AuthContext";
 import { useLang } from "../context/LanguageContext";
 import { useToast } from "../context/ToastContext";
 import logo from "../assets/images/logo.png";
+import { adminSections } from "../config/adminSections";
 
-const ITEMS = [
-  { to: "/admin", key: "overview", icon: LayoutDashboard, exact: true },
-  { to: "/admin/notices", key: "manageNotices", icon: Megaphone },
-  { to: "/admin/events", key: "manageEvents", icon: CalendarDays },
-  { to: "/admin/gallery", key: "manageGallery", icon: Images },
-  { to: "/admin/staff", key: "manageStaff", icon: Users },
-  { to: "/admin/committee", key: "manageCommittee", icon: Users2 },
-  { to: "/admin/programs", key: "managePrograms", icon: BookOpen },
-  { to: "/admin/pages", key: "managePages", icon: FileText },
-  { to: "/admin/donation", key: "manageDonation", icon: HandCoins },
-  { to: "/admin/settings", key: "settings", icon: SettingsIcon },
-  { to: "/admin/ads", key: "manageAds", label: "Ad / Popup", icon: Megaphone },
-  { to: "/admin/inbox", key: "inbox", icon: Inbox },
-];
+const GROUPS = ["content", "people", "engagement", "site"];
 
 export function AdminLayout({ children }) {
   const { t } = useLang();
   const { path, navigate } = useRouter();
-  const { admin, logout } = useAuth();
+  const { admin, logout, authDisabled } = useAuth();
   const toast = useToast();
   const [open, setOpen] = useState(false);
+  const [expanded, setExpanded] = useState(() => Object.fromEntries(GROUPS.map((group) => [group, true])));
 
-  const active = (item) =>
-    item.exact ? path === item.to : path.startsWith(item.to);
+  const active = (item) => path.startsWith(item.admin);
 
   const handleLogout = async () => {
     await logout();
@@ -50,18 +37,26 @@ export function AdminLayout({ children }) {
           <span>{t("admin.dashboard")}</span>
         </Brand>
         <NavList>
-          {ITEMS.map((item) => {
-            const Icon = item.icon;
-            return (
-              <NavItem key={item.to} to={item.to} $active={active(item)} onClick={() => setOpen(false)}>
-                <Icon size={18} /> {item.label ?? t(`admin.${item.key}`)}
-              </NavItem>
-            );
-          })}
+          <NavItem to="/admin" $active={path === "/admin"} onClick={() => setOpen(false)}>
+            <LayoutDashboard size={18} /> {t("admin.overview")}
+          </NavItem>
+          {GROUPS.map((group) => (
+            <NavGroup key={group}>
+              <NavGroupTitle type="button" aria-expanded={expanded[group]} onClick={() => setExpanded((current) => ({ ...current, [group]: !current[group] }))}>
+                {t(`admin.group${group[0].toUpperCase()}${group.slice(1)}`)} <ChevronDown size={14} />
+              </NavGroupTitle>
+              <NavGroupItems $expanded={expanded[group]}><div>{adminSections.filter((item) => item.group === group).map((item) => {
+                const Icon = item.icon;
+                return <NavItem key={item.key} to={item.admin} $active={active(item)} onClick={() => setOpen(false)}>
+                  <Icon size={18} /> {t(item.labelKey)}
+                </NavItem>;
+              })}</div></NavGroupItems>
+            </NavGroup>
+          ))}
         </NavList>
         <SidebarFoot>
           <ViewSite to="/"><ExternalLink size={16} /> View site</ViewSite>
-          <LogoutBtn onClick={handleLogout}><LogOut size={16} /> {t("admin.signOut")}</LogoutBtn>
+          {!authDisabled && <LogoutBtn onClick={handleLogout}><LogOut size={16} /> {t("admin.signOut")}</LogoutBtn>}
         </SidebarFoot>
       </Sidebar>
 
@@ -75,7 +70,7 @@ export function AdminLayout({ children }) {
             <Who>{admin?.name || admin?.email}</Who>
           </TopActions>
         </Topbar>
-        <Inner>{children}</Inner>
+        <Inner key={path}>{children}</Inner>
       </Content>
 
       {open && <Backdrop onClick={() => setOpen(false)} />}
@@ -126,7 +121,20 @@ const NavList = styled.nav`
   flex-direction: column;
   padding: ${({ theme }) => theme.space[3]};
   gap: 2px;
-  flex: 1;
+  flex: 1; overflow-y: auto;
+`;
+const NavGroup = styled.div`display: flex; flex-direction: column; gap: 2px; margin-top: ${({ theme }) => theme.space[3]};`;
+const NavGroupTitle = styled.button`
+  width:100%; display:flex; align-items:center; justify-content:space-between; text-align:left;
+  padding: ${({ theme }) => theme.space[1]} ${({ theme }) => theme.space[4]};
+  color: rgba(255,255,255,.5); font-size: 0.67rem; font-weight: 800; letter-spacing: .1em; text-transform: uppercase;
+  border-radius:${({theme})=>theme.radii.sm}; transition:color ${({theme})=>theme.transitions.fast},background ${({theme})=>theme.transitions.fast};
+  svg{transition:transform ${({theme})=>theme.transitions.base}; transform:rotate(${({"aria-expanded": open})=>open?"180deg":"0"});}
+  &:hover{color:#fff;background:rgba(255,255,255,.08)}
+`;
+const NavGroupItems = styled.div`
+  display:grid; grid-template-rows:${({$expanded})=>$expanded?"1fr":"0fr"}; opacity:${({$expanded})=>$expanded?1:.45}; transition:grid-template-rows ${({theme})=>theme.transitions.slow},opacity ${({theme})=>theme.transitions.base};
+  > div{min-height:0;overflow:hidden;display:flex;flex-direction:column;gap:2px;}
 `;
 
 const NavItem = styled(Link)`
@@ -203,8 +211,10 @@ const Who = styled.span`
   font-weight: 600;
 `;
 
+const adminPageIn = keyframes`from{opacity:0;transform:translateY(10px)}to{opacity:1;transform:none}`;
 const Inner = styled.div`
   padding: ${({ theme }) => theme.space[8]};
+  animation:${adminPageIn} .36s cubic-bezier(.22,1,.36,1) both;
   ${({ theme }) => theme.media.tablet(`padding: 1.25rem;`)}
 `;
 

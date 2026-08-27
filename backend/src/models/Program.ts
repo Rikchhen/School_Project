@@ -13,6 +13,7 @@ const programSchema = new Schema(
     },
     description: { type: String, default: "" },
     descriptionNe: { type: String, default: "" },
+    imageUrl: { type: String, default: "" },
     coreSubjects: { type: [String], default: [] },
     keyAreas: { type: [String], default: [] },
     accent: { type: String, enum: ["primary", "secondary"], default: "primary" },

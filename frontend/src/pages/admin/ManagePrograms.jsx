@@ -4,7 +4,7 @@ import { Badge } from "../../components/ui/Badge";
 const config = {
   title: "Programs",
   endpoint: "/programs",
-  defaults: { category: "general", accent: "primary", order: 0, published: true, nameNe: "", descriptionNe: "", coreSubjects: [], keyAreas: [] },
+  defaults: { category: "general", accent: "primary", order: 0, published: true, nameNe: "", descriptionNe: "", imageUrl: "", coreSubjects: [], keyAreas: [] },
   columns: [
     { key: "name", label: "Program", render: (r) => <strong>{r.name}</strong> },
     { key: "category", label: "Category", render: (r) => <Badge $tone="secondary">{r.category}</Badge> },
@@ -19,6 +19,7 @@ const config = {
     { name: "order", label: "Sort order", type: "number" },
     { name: "description", label: "Description (English)", type: "richtext", full: true },
     { name: "descriptionNe", label: "Description (Nepali)", type: "richtext", full: true },
+    { name: "imageUrl", label: "Cover image", type: "image", full: true },
     { name: "coreSubjects", label: "Core subjects", type: "csv", full: true, help: "Shown as chips. Comma-separated." },
     { name: "keyAreas", label: "Key areas", type: "csv", full: true, help: "Shown as a bullet list. Comma-separated." },
     { name: "published", label: "Published", type: "checkbox", full: true },

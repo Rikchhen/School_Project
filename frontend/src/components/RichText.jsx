@@ -18,8 +18,8 @@ const Prose = styled.div`
   color: ${({ theme }) => theme.colors.textBody};
   line-height: ${({ theme }) => theme.lineHeights.relaxed};
 
-  p { margin-bottom: ${({ theme }) => theme.space[3]}; }
-  p:last-child { margin-bottom: 0; }
+  p, & > div { margin-bottom: ${({ theme }) => theme.space[3]}; }
+  p:last-child, & > div:last-child { margin-bottom: 0; }
 
   strong, b { font-weight: ${({ theme }) => theme.fontWeights.bold}; color: ${({ theme }) => theme.colors.text}; }
   em, i { font-style: italic; }

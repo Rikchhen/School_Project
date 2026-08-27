@@ -12,6 +12,7 @@ import { SmartImage } from "../components/SmartImage";
 import { FetchError } from "../components/FetchError";
 import { Reveal } from "../components/Reveal";
 import { htmlToText } from "../lib/sanitizeHtml";
+import { ReadMore } from "../components/ReadMore";
 
 const DEPTS = ["all", "administration", "science", "management", "humanities", "languages", "general"];
 
@@ -42,15 +43,15 @@ export function Faculty() {
           ) : filtered.length === 0 ? (
             <Empty>{t("admin.noItems")}</Empty>
           ) : (
-            <Grid as={Reveal} stagger={70} $cols={4}>
+            <StaffGrid as={Reveal} stagger={70} $cols={4}>
               {filtered.map((m) => (
                 <StaffCard key={m._id} $hover $pad={0}>
-                  <Photo><SmartImage src={m.photoUrl} alt={m.name} height="220px" /></Photo>
+                  <Photo><SmartImage src={m.photoUrl} alt={pickLang(m, "name")} height="220px" fit="contain" /></Photo>
                   <Info>
                     <h3>{pickLang(m, "name")}</h3>
                     <Role>{pickLang(m, "role")}</Role>
                     <Badge $tone="secondary">{m.department}</Badge>
-                    {m.bio && <Bio>{htmlToText(m.bio)}</Bio>}
+                    {pickLang(m, "bio") && <Bio lines={3}>{htmlToText(pickLang(m, "bio"))}</Bio>}
                     <Contacts>
                       {m.email && <a href={`mailto:${m.email}`} aria-label="Email"><Mail size={15} /></a>}
                       {m.phone && <a href={`tel:${m.phone}`} aria-label="Phone"><Phone size={15} /></a>}
@@ -58,7 +59,7 @@ export function Faculty() {
                   </Info>
                 </StaffCard>
               ))}
-            </Grid>
+            </StaffGrid>
           )}
         </Container>
       </Section>
@@ -75,19 +76,31 @@ const Chip = styled.button`
   background: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.surface)};
   color: ${({ theme, $active }) => ($active ? "#fff" : theme.colors.textBody)};
 `;
-const StaffCard = styled(Card)`overflow: hidden;`;
-const Photo = styled.div`background: ${({ theme }) => theme.colors.surfaceAlt};`;
+const StaffGrid = styled(Grid)`align-items: start;`;
+const StaffCard = styled(Card)`
+  overflow: hidden; width: 100%; height: 540px; display: flex; flex-direction: column;
+  &:has([data-expanded="true"]) { height: auto; min-height: 540px; }
+  @media (prefers-reduced-motion: reduce) { transition: none; }
+  &:hover img { transform:scale(1.045); }
+`;
+const Photo = styled.div`background: ${({ theme }) => theme.colors.surfaceAlt};overflow:hidden;img{transition:transform ${({theme})=>theme.transitions.slow}}`;
 const Info = styled.div`
-  padding: ${({ theme }) => theme.space[5]}; display: flex; flex-direction: column; gap: 8px; align-items: flex-start;
-  h3 { color: ${({ theme }) => theme.colors.text}; font-size: ${({ theme }) => theme.fontSizes.lg}; }
+  padding: ${({ theme }) => theme.space[5]}; display: flex; flex: 1; flex-direction: column; gap: 8px; align-items: flex-start;
+  h3 { color: ${({ theme }) => theme.colors.text}; font-size: ${({ theme }) => theme.fontSizes.lg}; min-height: 2.5em; }
 `;
 const Role = styled.span`color: ${({ theme }) => theme.colors.primary}; font-weight: 600; font-size: ${({ theme }) => theme.fontSizes.sm};`;
-const Bio = styled.p`color: ${({ theme }) => theme.colors.textBody}; font-size: ${({ theme }) => theme.fontSizes.sm};`;
+const Bio = styled(ReadMore)`
+  color: ${({ theme }) => theme.colors.textBody};
+  font-size: ${({ theme }) => theme.fontSizes.sm};
+  min-height: calc(3 * 1.65em);
+`;
 const Contacts = styled.div`
-  display: flex; gap: ${({ theme }) => theme.space[2]}; margin-top: 4px;
+  display: flex; gap: ${({ theme }) => theme.space[2]}; margin-top: auto;
   a { width: 34px; height: 34px; display: grid; place-items: center; border-radius: ${({ theme }) => theme.radii.pill};
       background: ${({ theme }) => theme.colors.secondarySoft}; color: ${({ theme }) => theme.colors.secondary}; }
   a:hover { background: ${({ theme }) => theme.colors.secondary}; color: #fff; }
+  a { transition:transform ${({theme})=>theme.transitions.fast},background ${({theme})=>theme.transitions.fast},color ${({theme})=>theme.transitions.fast}; }
+  a:hover { transform:translateY(-2px) scale(1.05); }
 `;
 const Empty = styled.p`text-align: center; color: ${({ theme }) => theme.colors.textMuted}; padding: ${({ theme }) => theme.space[16]};`;
 

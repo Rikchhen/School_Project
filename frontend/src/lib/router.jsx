@@ -22,10 +22,11 @@ export function RouterProvider({ children }) {
   }, []);
 
   const navigate = useCallback((to, { replace = false } = {}) => {
-    if (to === window.location.pathname) return;
+    const target = new URL(to, window.location.href);
+    if (`${target.pathname}${target.search}${target.hash}` === `${window.location.pathname}${window.location.search}${window.location.hash}`) return;
     if (replace) window.history.replaceState({}, "", to);
     else window.history.pushState({}, "", to);
-    setPath(to);
+    setPath(target.pathname || "/");
     window.scrollTo({ top: 0, behavior: "instant" in window ? "instant" : "auto" });
   }, []);
 

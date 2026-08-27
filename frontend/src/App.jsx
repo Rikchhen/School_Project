@@ -22,6 +22,7 @@ import { PageView } from "./pages/PageView";
 import { NoticeDetail } from "./pages/NoticeDetail";
 import { EventDetail } from "./pages/EventDetail";
 import { NotFound } from "./pages/NotFound";
+import { Syllabus } from "./pages/Syllabus";
 
 // Admin pages — lazy-loaded so the public bundle stays lean.
 const AdminLogin = lazy(() => import("./pages/admin/Login").then((m) => ({ default: m.AdminLogin })));
@@ -36,12 +37,14 @@ const ManagePages = lazy(() => import("./pages/admin/ManagePages").then((m) => (
 const ManageDonation = lazy(() => import("./pages/admin/ManageDonation").then((m) => ({ default: m.ManageDonation })));
 const ManageSettings = lazy(() => import("./pages/admin/ManageSettings").then((m) => ({ default: m.ManageSettings })));
 const ManageAds = lazy(() => import("./pages/admin/ManageAds").then((m) => ({ default: m.ManageAds })));
+const ManageSyllabus = lazy(() => import("./pages/admin/ManageSyllabus").then((m) => ({ default: m.ManageSyllabus })));
 const Inbox = lazy(() => import("./pages/admin/Inbox").then((m) => ({ default: m.Inbox })));
 
 const PUBLIC_ROUTES = {
   "/": Home,
   "/about": About,
   "/academic": Academics,
+  "/syllabus": Syllabus,
   "/admissions": Admissions,
   "/faculty": Faculty,
   "/gallery": Gallery,
@@ -60,6 +63,7 @@ const ADMIN_ROUTES = {
   "/admin/staff": ManageStaff,
   "/admin/committee": ManageCommittee,
   "/admin/programs": ManagePrograms,
+  "/admin/syllabus": ManageSyllabus,
   "/admin/pages": ManagePages,
   "/admin/donation": ManageDonation,
   "/admin/settings": ManageSettings,
@@ -94,7 +98,6 @@ export default function App() {
     const id = decodeURIComponent(path.slice("/events/".length));
     return <PublicLayout><EventDetail id={id} /></PublicLayout>;
   }
-
   const Page = PUBLIC_ROUTES[path] || NotFound;
   return (
     <PublicLayout>
@@ -110,6 +113,10 @@ function AdminArea({ path }) {
 
   // Hooks must run unconditionally — guard the redirect by route instead.
   useEffect(() => {
+    if (isLoginRoute && !loading && isAuthenticated) {
+      navigate("/admin", { replace: true });
+      return;
+    }
     if (!isLoginRoute && !loading && !isAuthenticated) {
       navigate("/admin/login", { replace: true });
     }
@@ -117,6 +124,7 @@ function AdminArea({ path }) {
 
   // Login screen is outside the protected shell.
   if (isLoginRoute) {
+    if (isAuthenticated) return <Splash>Opening dashboardâ€¦</Splash>;
     return (
       <Suspense fallback={<Splash>Loading…</Splash>}>
         <AdminLogin />

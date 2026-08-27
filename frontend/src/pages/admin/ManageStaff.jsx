@@ -5,7 +5,7 @@ import { SmartImage } from "../../components/SmartImage";
 const config = {
   title: "Staff",
   endpoint: "/staff",
-  defaults: { department: "general", published: true, order: 0, nameNe: "", roleNe: "", bio: "", email: "", phone: "", photoUrl: "" },
+  defaults: { department: "general", published: true, order: 0, nameNe: "", roleNe: "", bio: "", bioNe: "", email: "", phone: "", photoUrl: "" },
   columns: [
     { key: "photoUrl", label: "Photo", render: (r) => (
       <div style={{ width: 44, height: 44, borderRadius: "50%", overflow: "hidden" }}>
@@ -26,7 +26,8 @@ const config = {
     { name: "order", label: "Sort order", type: "number" },
     { name: "email", label: "Email", type: "text" },
     { name: "phone", label: "Phone", type: "text" },
-    { name: "bio", label: "Bio", type: "richtext", full: true },
+    { name: "bio", label: "Bio (English)", type: "richtext", full: true },
+    { name: "bioNe", label: "Bio (Nepali)", type: "richtext", full: true },
     { name: "photoUrl", label: "Photo", type: "image", full: true },
     { name: "published", label: "Published", type: "checkbox", full: true },
   ],

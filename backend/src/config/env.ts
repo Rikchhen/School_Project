@@ -26,10 +26,15 @@ const envSchema = z.object({
   COOKIE_NAME: z.string().default("adarsha_token"),
   CLIENT_URL: z.string().default("http://localhost:5180"),
   TRUST_PROXY: z.coerce.number().int().min(0).max(5).default(0),
+  // Absolute path to a persistent volume for uploaded files (e.g. a mounted
+  // disk in production). Empty → files live under the backend working directory.
+  UPLOAD_ROOT: z.string().optional().default(""),
   DONOR_RETENTION_DAYS: z.coerce.number().int().min(1).max(3650).default(90),
   DONOR_DOCUMENT_KEY: z.string().optional().default(""),
   CLAMAV_ENABLED: z.string().default("false").transform((v) => v === "true"),
   CLAMAV_COMMAND: z.string().default("clamdscan"),
+  // Temporary local-development convenience. Never honored in test/production.
+  DISABLE_ADMIN_AUTH: z.string().default("true").transform((v) => v === "true"),
 
   // Seed-only values (optional in normal runtime)
   SEED_ADMIN_EMAIL: z.string().email().default("admin@adarsha.edu.np"),
@@ -51,6 +56,8 @@ export type Env = typeof env;
 
 export const isProd = env.NODE_ENV === "production";
 export const isTest = env.NODE_ENV === "test";
+export const isDev = env.NODE_ENV === "development";
+export const adminAuthDisabled = isDev && env.DISABLE_ADMIN_AUTH;
 
 if (isProd) {
   if (env.JWT_SECRET_TOKEN.length < 32 || env.JWT_SECRET_TOKEN === "dev_only_insecure_secret_change_me") {

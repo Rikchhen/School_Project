@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import styled, { keyframes } from "styled-components";
 import { Menu, X, Globe, Phone, Mail, MapPin, GraduationCap, ChevronDown } from "lucide-react";
 import { FaFacebookF, FaInstagram, FaYoutube, FaXTwitter, FaTiktok, FaLinkedinIn, FaWhatsapp } from "react-icons/fa6";
@@ -13,24 +13,23 @@ import { BackToTop } from "../components/BackToTop";
 import { ScrollProgress } from "../components/ScrollProgress";
 import { MobileActionBar } from "../components/MobileActionBar";
 import { InterstitialAd } from "../components/InterstitialAd";
+import { RichText } from "../components/RichText";
+import { assetUrl } from "../lib/api";
 import logo from "../assets/images/logo.png";
 
-// Grouped nav with dropdowns (About / Media) plus flat links.
-const NAV_GROUPS = [
-  { key: "home", to: "/" },
-  { key: "about", label: "about", items: [
-    { to: "/about", key: "about" },
-    { to: "/committee", key: "committee" },
-    { to: "/faculty", key: "faculty" },
+const DEFAULT_NAVIGATION = [
+  { label: "Home", labelNe: "गृह", url: "/", children: [] },
+  { label: "About", labelNe: "हाम्रो बारेमा", children: [
+    { label: "About", labelNe: "हाम्रो बारेमा", url: "/about" }, { label: "Committee", labelNe: "समिति", url: "/committee" }, { label: "Faculty", labelNe: "शिक्षक", url: "/faculty" },
   ] },
-  { key: "academic", to: "/academic" },
-  { key: "admissions", to: "/admissions" },
-  { key: "media", label: "media", items: [
-    { to: "/gallery", key: "gallery" },
-    { to: "/notices", key: "notices" },
-    { to: "/events", key: "events" },
+  { label: "Academic", labelNe: "शैक्षिक", children: [
+    { label: "Academic", labelNe: "शैक्षिक", url: "/academic" }, { label: "Syllabus", labelNe: "पाठ्यक्रम", url: "/syllabus" },
   ] },
-  { key: "contact", to: "/contact" },
+  { label: "Admissions", labelNe: "भर्ना", url: "/admissions", children: [] },
+  { label: "Media", labelNe: "मिडिया", children: [
+    { label: "Gallery", labelNe: "ग्यालरी", url: "/gallery" }, { label: "Notice Board", labelNe: "सूचना पाटी", url: "/notices" }, { label: "News & Events", labelNe: "खबर र कार्यक्रम", url: "/events" },
+  ] },
+  { label: "Contact", labelNe: "सम्पर्क", url: "/contact", children: [] },
 ];
 
 const SOCIAL_ICONS = {
@@ -43,6 +42,18 @@ export function PublicLayout({ children }) {
   const { path } = useRouter();
   const { settings } = useSettings();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    let frame = 0;
+    const update = () => {
+      cancelAnimationFrame(frame);
+      frame = requestAnimationFrame(() => setScrolled(window.scrollY > 28));
+    };
+    update();
+    window.addEventListener("scroll", update, { passive: true });
+    return () => { cancelAnimationFrame(frame); window.removeEventListener("scroll", update); };
+  }, []);
 
   const socials = Object.entries(settings.socials || {}).filter(([, url]) => url);
   const contact = settings.contact || {};
@@ -52,6 +63,12 @@ export function PublicLayout({ children }) {
   const cHours = pickLang(contact, "hours") || t("contact.hours");
   const ne = lang === "ne";
   const isActive = (to) => (to === "/" ? path === "/" : path.startsWith(to));
+  const navigation = settings.navigation?.length ? settings.navigation : DEFAULT_NAVIGATION;
+  const branding = settings.branding || {};
+  const brandLogo = branding.logoUrl ? assetUrl(branding.logoUrl) : logo;
+  const brandLogoHeight = Math.min(96, Math.max(40, Number(branding.logoHeight) || 64));
+  const brandName = pickLang(branding, "schoolName");
+  const brandTagline = pickLang(branding, "tagline");
 
   const LangBtn = (
     <LangButton onClick={toggleLang} aria-label="Toggle language">
@@ -92,36 +109,40 @@ export function PublicLayout({ children }) {
       </TopBar>
 
       {/* Main header */}
-      <Header>
+      <Header $scrolled={scrolled}>
         <Container>
-          <HeaderRow>
-            <Brand to="/" onClick={() => setMenuOpen(false)}>
-              <LogoRing><img src={logo} alt="" width={46} height={46} /></LogoRing>
+          <HeaderRow $logoHeight={brandLogoHeight} $scrolled={scrolled}>
+            <Brand to="/" onClick={() => setMenuOpen(false)} $scrolled={scrolled}>
+              <LogoRing $height={brandLogoHeight} $ring={branding.showLogoRing} $scrolled={scrolled}><img src={brandLogo} alt="" /></LogoRing>
               <BrandText $ne={ne}>
-                <strong lang={ne ? "ne" : undefined}>{t("common.schoolName")}</strong>
-                <span>{ne ? "लालगढ, धनुषा" : "Lalgadh, Dhanusha · Est. 2029 BS"}</span>
+                {brandName ? <BrandName html={brandName} /> : <strong lang={ne ? "ne" : undefined}>{t("common.schoolName")}</strong>}
+                {brandTagline ? <BrandTagline html={brandTagline} /> : <span>{ne ? "लालगढ, धनुषा" : "Lalgadh, Dhanusha · Est. 2029 BS"}</span>}
               </BrandText>
             </Brand>
 
             <RightCluster>
               <Nav $open={menuOpen}>
-                {NAV_GROUPS.map((g) =>
-                  g.items ? (
-                    <Drop key={g.key}>
-                      <DropBtn type="button">
-                        {t(`nav.${g.label}`)} <ChevronDown size={15} />
+                {navigation.map((item, index) =>
+                  item.children?.length ? (
+                    <Drop key={`${item.label}-${index}`}>
+                      <DropBtn type="button" aria-haspopup="menu">
+                        {pickLang(item, "label")} <ChevronDown size={15} />
                       </DropBtn>
-                      <DropMenu>
-                        {g.items.map((it) => (
-                          <DropLink key={it.to} to={it.to} $active={isActive(it.to)} onClick={() => setMenuOpen(false)}>
-                            {t(`nav.${it.key}`)}
+                      <DropMenu role="menu">
+                        {item.children.map((child, childIndex) => (
+                          <DropLink role="menuitem" key={`${child.label}-${childIndex}`}
+                            {...(child.external ? { as: "a", href: child.url, target: "_blank", rel: "noopener noreferrer" } : { to: child.url })}
+                            $active={!child.external && isActive(child.url)} onClick={() => setMenuOpen(false)}>
+                            {pickLang(child, "label")}
                           </DropLink>
                         ))}
                       </DropMenu>
                     </Drop>
                   ) : (
-                    <NavLink key={g.to} to={g.to} $active={isActive(g.to)} onClick={() => setMenuOpen(false)}>
-                      {t(`nav.${g.key}`)}
+                    <NavLink key={`${item.label}-${index}`}
+                      {...(item.external ? { as: "a", href: item.url, target: "_blank", rel: "noopener noreferrer" } : { to: item.url })}
+                      $active={!item.external && isActive(item.url)} onClick={() => setMenuOpen(false)}>
+                      {pickLang(item, "label")}
                     </NavLink>
                   )
                 )}
@@ -173,6 +194,7 @@ export function PublicLayout({ children }) {
                 <h4>{t("footer.quickLinks")}</h4>
                 <Link to="/about">{t("nav.about")}</Link>
                 <Link to="/academic">{t("nav.academic")}</Link>
+                <Link to="/syllabus">{t("nav.syllabus")}</Link>
                 <Link to="/admissions">{t("nav.admissions")}</Link>
                 <Link to="/faculty">{t("nav.faculty")}</Link>
                 <Link to="/committee">{t("nav.committee")}</Link>
@@ -241,35 +263,63 @@ const TopSocials = styled.div`
 const Header = styled.header`
   position: sticky; top: 0; z-index: ${({ theme }) => theme.zIndex.header};
   background: ${({ theme }) => theme.colors.surface};
-  box-shadow: ${({ theme }) => theme.shadows.sm};
+  box-shadow: ${({ theme, $scrolled }) => ($scrolled ? theme.shadows.lg : theme.shadows.sm)};
   border-bottom: 2px solid ${({ theme }) => theme.colors.primary};
+  transition: box-shadow ${({ theme }) => theme.transitions.base}, background-color ${({ theme }) => theme.transitions.base};
 `;
 const HeaderRow = styled.div`
-  min-height: ${({ theme }) => theme.layout.navHeight};
+  min-height: ${({ theme, $logoHeight }) => `max(${theme.layout.navHeight}, ${$logoHeight + 16}px)`};
+  padding-block: 8px;
   display: flex; align-items: center; justify-content: space-between; gap: ${({ theme }) => theme.space[4]};
+  transition: padding ${({ theme }) => theme.transitions.base};
+  ${({ $scrolled }) => $scrolled && "padding-block: 4px;"}
+  ${({ theme }) => theme.media.mobile(`min-height: ${theme.layout.navHeight}; padding-block: 6px;`)}
 `;
-const Brand = styled(Link)`display: flex; align-items: center; gap: ${({ theme }) => theme.space[3]}; flex-shrink: 0;`;
+const Brand = styled(Link)`display: flex; align-items: center; gap: ${({ theme }) => theme.space[3]}; min-width: 0; transform-origin:left center; transition:transform ${({theme})=>theme.transitions.base}; ${({$scrolled})=>$scrolled&&"transform:scale(.94);"}`;
 const LogoRing = styled.div`
-  width: 54px; height: 54px; border-radius: ${({ theme }) => theme.radii.pill};
-  display: grid; place-items: center; background: ${({ theme }) => theme.colors.primarySoft};
-  img { border-radius: ${({ theme }) => theme.radii.pill}; }
+  height: ${({ $height }) => `${$height}px`}; width: max-content; max-width: 150px; flex-shrink: 0;
+  display: flex; align-items: center; justify-content: center; padding: ${({ $ring }) => ($ring ? "4px" : "0")};
+  border-radius: ${({ $ring, theme }) => ($ring ? theme.radii.pill : "0")};
+  background: ${({ $ring, theme }) => ($ring ? theme.colors.primarySoft : "transparent")};
+  border: 1px solid ${({ $ring, theme }) => ($ring ? theme.colors.primary : "transparent")};
+  img { display: block; width: auto; height: 100%; max-width: 100%; max-height: 100%; object-fit: contain; object-position: center; border-radius: ${({ $ring, theme }) => ($ring ? theme.radii.pill : "0")}; }
+  ${({ theme }) => theme.media.mobile(`height: 54px; max-width: 78px;`)}
+  transition: transform ${({ theme }) => theme.transitions.base};
+  ${({ $scrolled }) => $scrolled && "transform: scale(.92);"}
 `;
 const BrandText = styled.div`
-  display: flex; flex-direction: column; line-height: 1.2;
+  display: flex; flex-direction: column; line-height: 1.2; min-width: 0;
   strong {
     font-family: ${({ theme }) => theme.fonts.heading};
     color: ${({ theme }) => theme.colors.primary};
     font-size: ${({ theme }) => theme.fontSizes.lg};
     font-weight: ${({ theme }) => theme.fontWeights.bold};
+    overflow-wrap: anywhere;
   }
   span { color: ${({ theme }) => theme.colors.textMuted}; font-size: ${({ theme }) => theme.fontSizes.xs}; }
-  ${({ theme }) => theme.media.mobile(`strong { font-size: 0.98rem; } span { display: none; }`)}
+  ${({ theme }) => theme.media.mobile(`strong { font-size: 0.92rem; } span { display: none; }`)}
+`;
+const BrandName = styled(RichText)`
+  min-width: 0; max-height: 2.5rem; overflow: hidden; color: ${({ theme }) => theme.colors.primary};
+  line-height: 1.15; white-space: nowrap; text-overflow: ellipsis;
+  &, p, div, h2, h3, h4 { display: inline; margin: 0; line-height: inherit; }
+  * { max-width: 100%; }
+`;
+const BrandTagline = styled(RichText)`
+  min-width: 0; max-height: 1.5rem; overflow: hidden; color: ${({ theme }) => theme.colors.textMuted};
+  font-size: ${({ theme }) => theme.fontSizes.xs}; line-height: 1.2; white-space: nowrap; text-overflow: ellipsis;
+  &, p, div, h2, h3, h4 { display: inline; margin: 0; line-height: inherit; }
+  ${({ theme }) => theme.media.mobile(`display: none;`)}
 `;
 
-const RightCluster = styled.div`display: flex; align-items: center; gap: ${({ theme }) => theme.space[4]};`;
+const RightCluster = styled.div`
+  display: flex; align-items: center; justify-content: flex-end; gap: clamp(10px, 1.2vw, ${({ theme }) => theme.space[4]});
+  min-width: 0; flex-shrink: 1;
+`;
 
 const Nav = styled.nav`
-  display: flex; align-items: center; gap: ${({ theme }) => theme.space[4]}; flex-wrap: wrap; justify-content: flex-end;
+  display: flex; align-items: center; gap: clamp(10px, 1.2vw, ${({ theme }) => theme.space[4]});
+  flex-wrap: nowrap; justify-content: flex-end; white-space: nowrap;
 
   ${({ theme, $open }) => theme.media.laptop(`
     position: fixed; inset: auto 0 auto 0; top: calc(${theme.layout.navHeight});
@@ -284,9 +334,11 @@ const NavLink = styled(Link)`
   font-size: ${({ theme }) => theme.fontSizes.sm};
   font-weight: ${({ theme, $active }) => ($active ? theme.fontWeights.bold : theme.fontWeights.medium)};
   color: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.navInactive)};
-  padding: 6px 2px; border-bottom: 2px solid ${({ theme, $active }) => ($active ? theme.colors.primary : "transparent")};
+  position: relative; padding: 6px 2px; border-bottom: 2px solid transparent;
   transition: color ${({ theme }) => theme.transitions.base}; white-space: nowrap;
   &:hover { color: ${({ theme }) => theme.colors.primary}; }
+  &::after { content:""; position:absolute; left:0; right:0; bottom:-2px; height:2px; border-radius:2px; background:${({theme})=>theme.colors.primary}; transform:scaleX(${({$active})=>$active?1:0}); transform-origin:left; transition:transform ${({theme})=>theme.transitions.base}; }
+  &:hover::after { transform:scaleX(1); }
   ${({ theme }) => theme.media.laptop(`padding: 0.85rem 0; border-bottom: 1px solid ${theme.colors.border}; width: 100%;`)}
 `;
 /* Dropdown group */
@@ -316,6 +368,8 @@ const DropMenu = styled.div`
   opacity: 0; visibility: hidden; transform: translateY(6px);
   transition: opacity ${({ theme }) => theme.transitions.base}, transform ${({ theme }) => theme.transitions.base}, visibility ${({ theme }) => theme.transitions.base};
   ${Drop}:hover &, ${Drop}:focus-within & { opacity: 1; visibility: visible; transform: none; }
+  ${Drop}:hover & > a, ${Drop}:focus-within & > a { opacity:1; transform:none; }
+  & > a:nth-child(1){transition-delay:30ms} & > a:nth-child(2){transition-delay:55ms} & > a:nth-child(3){transition-delay:80ms} & > a:nth-child(4){transition-delay:105ms} & > a:nth-child(n+5){transition-delay:130ms}
   ${({ theme }) => theme.media.laptop(`
     position: static; opacity: 1; visibility: visible; transform: none;
     box-shadow: none; border: none; border-radius: 0; padding: 0 0 0 0.75rem; min-width: 0;
@@ -327,8 +381,9 @@ const DropLink = styled(Link)`
   font-weight: ${({ theme, $active }) => ($active ? theme.fontWeights.bold : theme.fontWeights.medium)};
   color: ${({ theme, $active }) => ($active ? theme.colors.primary : theme.colors.textBody)};
   white-space: nowrap;
+  opacity:0; transform:translateY(5px); transition:opacity ${({theme})=>theme.transitions.base},transform ${({theme})=>theme.transitions.base},background ${({theme})=>theme.transitions.fast},color ${({theme})=>theme.transitions.fast};
   &:hover { background: ${({ theme }) => theme.colors.primarySoft}; color: ${({ theme }) => theme.colors.primary}; }
-  ${({ theme }) => theme.media.laptop(`padding: 0.7rem 0; border-radius: 0; border-bottom: 1px dashed ${theme.colors.border};`)}
+  ${({ theme }) => theme.media.laptop(`padding: 0.7rem 0; border-radius: 0; border-bottom: 1px dashed ${theme.colors.border}; opacity:1; transform:none; transition-delay:0ms;`)}
 `;
 const MobileLang = styled.button`
   display: none;

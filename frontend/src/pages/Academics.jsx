@@ -9,7 +9,10 @@ import { Container, Section } from "../components/ui/Layout";
 import { Card } from "../components/ui/Card";
 import { Badge } from "../components/ui/Badge";
 import { Button } from "../components/ui/Button";
+import { SmartImage } from "../components/SmartImage";
 import { Reveal } from "../components/Reveal";
+import { ReadMore } from "../components/ReadMore";
+import { CappedList } from "../components/CappedList";
 
 const PROGRAMS = [
   {
@@ -61,6 +64,7 @@ export function Academics() {
         accent: p.accent || "primary",
         name: p.name,
         nameNe: p.nameNe,
+        imageUrl: p.imageUrl,
         desc: pickLang(p, "description"),
         subjects: p.coreSubjects && p.coreSubjects.length ? p.coreSubjects : undefined,
         areas: p.keyAreas && p.keyAreas.length ? p.keyAreas : undefined,
@@ -88,28 +92,31 @@ export function Academics() {
               const Icon = p.icon;
               return (
                 <ProgramCard key={p.name} $accent={p.accent} $hover>
+                  {p.imageUrl && <ProgCover><SmartImage src={p.imageUrl} alt={p.name} height="100%" fit="cover" /></ProgCover>}
                   <Head>
                     <IconRound $tone={p.accent}><Icon size={22} /></IconRound>
                     <div>
                       <h3 lang={lang === "ne" ? "ne" : undefined}>{lang === "ne" ? p.nameNe : p.name}</h3>
                     </div>
                   </Head>
-                  <p>{p.desc}</p>
+                  <Description lines={3}>{p.desc}</Description>
                   {p.subjects && (
                     <>
                       <Label>{t("academics.coreSubjects")}</Label>
-                      <Chips>{p.subjects.map((s) => <Badge key={s} $tone="secondary">{s}</Badge>)}</Chips>
+                      <CappedList items={p.subjects} limit={6} as={Chips}
+                        renderItem={(s) => <Badge key={s} $tone="secondary">{s}</Badge>} />
                     </>
                   )}
                   {p.areas && (
                     <>
                       <Label>{t("academics.keyAreas")}</Label>
-                      <ul>{p.areas.map((a) => <li key={a}>{a}</li>)}</ul>
+                      <CappedList items={p.areas} limit={4} as={AreaList}
+                        renderItem={(a) => <li key={a}>{a}</li>} />
                     </>
                   )}
-                  <Button as={Link} to="/admissions" $variant={p.accent === "primary" ? "primary" : "outline"} $size="sm" $rounded="md">
+                  <SyllabusButton as={Link} to={`/syllabus?stream=${p.cat}`} $variant={p.accent === "primary" ? "primary" : "outline"} $size="sm" $rounded="md">
                     {t("academics.viewSyllabus")} <ArrowRight size={15} />
-                  </Button>
+                  </SyllabusButton>
                 </ProgramCard>
               );
             })}
@@ -152,15 +159,33 @@ const Tab = styled.button`
 `;
 const ProgramGrid = styled.div`
   display: grid; grid-template-columns: 1fr 1fr; gap: ${({ theme }) => theme.space[6]};
+  align-items: start;
   ${({ theme }) => theme.media.tablet(`grid-template-columns: 1fr;`)}
 `;
 const ProgramCard = styled(Card)`
   display: flex; flex-direction: column; gap: ${({ theme }) => theme.space[3]};
   padding: ${({ theme }) => theme.space[6]};
+  width: 100%; height: 660px;
+  &:has([data-expanded="true"]) { height: auto; min-height: 660px; }
   p { color: ${({ theme }) => theme.colors.textBody}; line-height: ${({ theme }) => theme.lineHeights.relaxed}; }
   ul { display: flex; flex-direction: column; gap: 4px; color: ${({ theme }) => theme.colors.textBody}; }
   ul li::before { content: "•"; color: ${({ theme }) => theme.colors.primary}; margin-right: 8px; }
-  button, a { align-self: flex-start; margin-top: auto; }
+  @media (prefers-reduced-motion: reduce) { transition: none; }
+  &:hover img { transform:scale(1.055); }
+`;
+const Description = styled(ReadMore)`
+  color: ${({ theme }) => theme.colors.textBody};
+  min-height: calc(4.95em + 2.25rem);
+  margin-bottom: ${({ theme }) => theme.space[2]};
+`;
+const ProgCover = styled.div`
+  margin: calc(-1 * ${({ theme }) => theme.space[6]}) calc(-1 * ${({ theme }) => theme.space[6]}) ${({ theme }) => theme.space[1]};
+  height: 200px;
+  border-radius: ${({ theme }) => theme.radii.lg} ${({ theme }) => theme.radii.lg} 0 0;
+  overflow: hidden;
+  background: ${({ theme }) => theme.colors.surfaceAlt};
+  img { width: 100%; height: 100%; object-fit: cover; object-position: center; transition:transform ${({theme})=>theme.transitions.slow}; }
+  ${({ theme }) => theme.media.tablet(`height: 180px;`)}
 `;
 const Head = styled.div`
   display: flex; align-items: center; gap: ${({ theme }) => theme.space[3]};
@@ -174,9 +199,12 @@ const IconRound = styled.div`
   color: ${({ theme, $tone }) => ($tone === "primary" ? theme.colors.primary : theme.colors.secondary)};
 `;
 const Label = styled.strong`
+  display: block; margin-top: ${({ theme }) => theme.space[1]};
   color: ${({ theme }) => theme.colors.text}; font-size: ${({ theme }) => theme.fontSizes.sm};
 `;
-const Chips = styled.div`display: flex; flex-wrap: wrap; gap: ${({ theme }) => theme.space[2]};`;
+const Chips = styled.div`display: flex; flex-wrap: wrap; gap: ${({ theme }) => theme.space[2]}; margin-top: 2px;`;
+const AreaList = styled.ul`display: flex; flex-direction: column; gap: 4px; margin-top: 2px; color: ${({ theme }) => theme.colors.textBody};`;
+const SyllabusButton = styled(Button)`align-self: flex-start; margin-top: auto; svg{transition:transform ${({theme})=>theme.transitions.base}} &:hover svg{transform:translateX(4px)}`;
 const Cta = styled.div`
   background: ${({ theme }) => theme.gradients.brandBanner};
   color: #fff; text-align: center;

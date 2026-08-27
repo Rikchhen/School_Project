@@ -75,7 +75,7 @@ export const Button = styled.button`
 
   /* subtle lift + brighten on hover */
   &:hover:not(:disabled) { transform: translateY(-2px); box-shadow: ${({ theme }) => theme.shadows.lg}; }
-  &:active:not(:disabled) { transform: translateY(0); }
+  &:active:not(:disabled) { transform: translateY(0) scale(0.97); }
   &:disabled { opacity: 0.6; cursor: not-allowed; }
 
   /* light sweep across the surface on hover */

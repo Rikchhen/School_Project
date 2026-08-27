@@ -1,0 +1,57 @@
+# Render Blueprint for the Adarsha school website.
+# One web service builds the React frontend + Node/TS backend, and the backend
+# serves the built frontend from the same URL. A persistent disk keeps uploaded
+# files (images, videos, PDFs) across restarts and deploys.
+#
+# HOW TO USE:
+#   1. Push this repo to GitHub.
+#   2. On Render: New +  ->  Blueprint  ->  pick this repo. Render reads this file.
+#   3. Fill in the env vars marked `sync: false` (MongoDB Atlas URL, secrets).
+#   4. Deploy. See DEPLOY.md for the full step-by-step.
+
+services:
+  - type: web
+    name: adarsha-school
+    runtime: node
+    plan: starter            # a paid plan is required for the persistent disk below
+    region: singapore        # closest Render region to Nepal; change if you prefer
+    branch: main
+    # Install dev deps too (vite + tsc live in devDependencies), build the
+    # frontend, then the backend.
+    buildCommand: >-
+      cd frontend && npm install --include=dev && npm run build &&
+      cd ../backend && npm install --include=dev && npm run build
+    # Start the API from the backend folder so it finds ../frontend/dist and uploads.
+    startCommand: cd backend && npm start
+    healthCheckPath: /api/health
+    disk:
+      name: uploads
+      mountPath: /var/data   # matches UPLOAD_ROOT below; holds uploads + private-uploads
+      sizeGB: 5
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: UPLOAD_ROOT
+        value: /var/data
+      - key: TRUST_PROXY
+        value: "1"            # behind Render's proxy — required for secure cookies
+      - key: DISABLE_ADMIN_AUTH
+        value: "false"
+      - key: JWT_EXPIRES_IN
+        value: 30m
+      - key: SESSION_IDLE_MINUTES
+        value: "30"
+      # --- Fill these in the Render dashboard (kept out of git) ---
+      - key: MONGO_URL
+        sync: false          # your MongoDB Atlas connection string
+      - key: CLIENT_URL
+        sync: false          # your live URL, e.g. https://adarsha-school.onrender.com (or your domain)
+      - key: JWT_SECRET_TOKEN
+        generateValue: true  # Render generates a strong 256-bit secret
+      - key: DONOR_DOCUMENT_KEY
+        generateValue: true  # required in production (>= 32 chars); encrypts donor documents
+      # Optional: seed admin (only used if you run the seed once manually)
+      - key: SEED_ADMIN_EMAIL
+        sync: false
+      - key: SEED_ADMIN_PASSWORD
+        sync: false

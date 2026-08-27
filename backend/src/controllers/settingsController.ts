@@ -22,6 +22,12 @@ export const updateSettings = asyncHandler(async (req: Request, res: Response) =
   if (typeof body.heroOpacity === "number") {
     current.heroOpacity = body.heroOpacity;
   }
+  if (body.branding) {
+    current.set("branding", { ...(current.branding as object), ...(body.branding as object) });
+  }
+  if (body.principal) {
+    current.set("principal", { ...(current.principal as object), ...(body.principal as object) });
+  }
   if (Array.isArray(body.banners)) {
     current.banners = body.banners as never;
   }
@@ -39,6 +45,9 @@ export const updateSettings = asyncHandler(async (req: Request, res: Response) =
   }
   if (Array.isArray(body.partners)) {
     current.partners = body.partners as never;
+  }
+  if (Array.isArray(body.navigation)) {
+    current.navigation = body.navigation as never;
   }
   if (Array.isArray(body.stats)) {
     current.stats = body.stats as never;

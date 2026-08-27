@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import styled from "styled-components";
-import { Plus, Trash2, Save, Heart, ShieldCheck } from "lucide-react";
+import { Plus, Trash2, Save, Heart, ShieldCheck, ArrowUp, ArrowDown, CornerDownRight } from "lucide-react";
 import { api } from "../../lib/api";
 import { useToast } from "../../context/ToastContext";
 import { useSettings } from "../../context/SettingsContext";
@@ -10,10 +10,44 @@ import { Field, Label, Input, Select, Textarea } from "../../components/ui/Input
 import { Skeleton } from "../../components/ui/Skeleton";
 import { ImageUploader } from "../../components/ImageUploader";
 import { MultiImageUploader } from "../../components/MultiImageUploader";
+import { RichTextEditor } from "../../components/admin/RichTextEditor";
 import { useAuth } from "../../context/AuthContext";
 import { useConfirm } from "../../context/ConfirmContext";
+import { Link } from "../../lib/router";
 
 const SOCIAL_FIELDS = ["facebook", "instagram", "youtube", "twitter", "tiktok", "linkedin", "whatsapp"];
+const BUILTIN_DESTINATIONS = ["/", "/about", "/academic", "/syllabus", "/admissions", "/gallery", "/notices", "/events", "/committee", "/faculty", "/contact", "/donation"].map((url) => ({ url, label: `Built-in · ${url}` }));
+const DEFAULT_NAVIGATION = [
+  { label: "Home", labelNe: "गृह", url: "/", external: false, children: [] },
+  { label: "About", labelNe: "हाम्रो बारेमा", url: "", external: false, children: [
+    { label: "About", labelNe: "हाम्रो बारेमा", url: "/about", external: false },
+    { label: "Committee", labelNe: "समिति", url: "/committee", external: false },
+    { label: "Faculty", labelNe: "शिक्षक", url: "/faculty", external: false },
+  ] },
+  { label: "Academic", labelNe: "शैक्षिक", url: "", external: false, children: [
+    { label: "Academic", labelNe: "शैक्षिक", url: "/academic", external: false },
+    { label: "Syllabus", labelNe: "पाठ्यक्रम", url: "/syllabus", external: false },
+  ] },
+  { label: "Admissions", labelNe: "भर्ना", url: "/admissions", external: false, children: [] },
+  { label: "Media", labelNe: "मिडिया", url: "", external: false, children: [
+    { label: "Gallery", labelNe: "ग्यालरी", url: "/gallery", external: false },
+    { label: "Notice Board", labelNe: "सूचना पाटी", url: "/notices", external: false },
+    { label: "News & Events", labelNe: "खबर र कार्यक्रम", url: "/events", external: false },
+  ] },
+  { label: "Contact", labelNe: "सम्पर्क", url: "/contact", external: false, children: [] },
+];
+
+function DestinationPicker({ value, onChange, destinations }) {
+  return (
+    <DestinationGrid>
+      <Select value={destinations.some((item) => item.url === value) ? value : ""} onChange={(e) => e.target.value && onChange(e.target.value)}>
+        <option value="">Choose an existing page…</option>
+        {destinations.map((item) => <option key={item.url} value={item.url}>{item.label}</option>)}
+      </Select>
+      <Input value={value} onChange={(e) => onChange(e.target.value)} placeholder="Or type /page/slug or https://example.com" />
+    </DestinationGrid>
+  );
+}
 
 export function ManageSettings() {
   const { confirmRemove } = useConfirm();
@@ -26,6 +60,7 @@ export function ManageSettings() {
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState([]);
   const [disablePassword, setDisablePassword] = useState("");
+  const [pageDestinations, setPageDestinations] = useState([]);
 
   const startTwoFactor = async () => { try { setTwoFactorSetup(await api.post("/auth/2fa/setup")); } catch (e) { toast.error(e.message); } };
   const confirmTwoFactor = async () => { try { const r = await api.post("/auth/2fa/confirm", { code: twoFactorCode }); setRecoveryCodes(r.recoveryCodes); setTwoFactorSetup(null); toast.success("Two-factor authentication enabled"); } catch (e) { toast.error(e.message); } };
@@ -36,16 +71,30 @@ export function ManageSettings() {
     api.get("/settings").then((r) => {
       const s = r.settings || {};
       const a = s.announcement || {};
+      const branding = s.branding || {};
       setForm({
         socials: { ...Object.fromEntries(SOCIAL_FIELDS.map((k) => [k, s.socials?.[k] || ""])) },
         donationEnabled: !!s.donationEnabled,
         heroOpacity: typeof s.heroOpacity === "number" ? s.heroOpacity : 1,
+        branding: {
+          logoUrl: branding.logoUrl || "", logoHeight: branding.logoHeight ?? 64,
+          showLogoRing: !!branding.showLogoRing, schoolName: branding.schoolName || "",
+          schoolNameNe: branding.schoolNameNe || "", tagline: branding.tagline || "", taglineNe: branding.taglineNe || "",
+        },
+        principal: {
+          name: "", nameNe: "", role: "", roleNe: "", photoUrl: "", message: "", messageNe: "",
+          ...(s.principal || {}),
+        },
         banners: (s.banners || []).map((b) => ({ ...b })),
         announcement: {
           enabled: !!a.enabled, text: a.text || "", textNe: a.textNe || "",
           link: a.link || "", linkLabel: a.linkLabel || "", linkLabelNe: a.linkLabelNe || "",
         },
         partners: (s.partners || []).map((p) => ({ name: p.name || "", logoUrl: p.logoUrl || "", url: p.url || "" })),
+        navigation: (s.navigation?.length ? s.navigation : DEFAULT_NAVIGATION).map((item) => ({
+          label: item.label || "", labelNe: item.labelNe || "", url: item.url || "", external: !!item.external,
+          children: (item.children || []).map((child) => ({ label: child.label || "", labelNe: child.labelNe || "", url: child.url || "", external: !!child.external })),
+        })),
         stats: (s.stats || []).map((x) => ({ value: x.value ?? 0, suffix: x.suffix || "", label: x.label || "", labelNe: x.labelNe || "" })),
         contact: {
           address: "", addressNe: "", phone: "", email: "", hours: "", hoursNe: "", mapUrl: "",
@@ -55,12 +104,39 @@ export function ManageSettings() {
       });
     }).catch((e) => toast.error(e.message));
   }, [toast]);
+  useEffect(() => {
+    api.get("/pages").then((r) => setPageDestinations((r.items || []).map((page) => ({
+      url: `/page/${page.slug}`, label: `Created page · ${page.title || page.slug}`,
+    })))).catch(() => setPageDestinations([]));
+  }, []);
+  useEffect(() => {
+    if (!form || !window.location.hash) return;
+    const frame = requestAnimationFrame(() => document.getElementById(window.location.hash.slice(1))?.scrollIntoView({ block: "start" }));
+    return () => cancelAnimationFrame(frame);
+  }, [form]);
 
   const setSocial = (k, v) => setForm((f) => ({ ...f, socials: { ...f.socials, [k]: v } }));
+  const setBranding = (k, v) => setForm((f) => ({ ...f, branding: { ...f.branding, [k]: v } }));
+  const setPrincipal = (k, v) => setForm((f) => ({ ...f, principal: { ...f.principal, [k]: v } }));
   const setAnn = (k, v) => setForm((f) => ({ ...f, announcement: { ...f.announcement, [k]: v } }));
   const setPartner = (i, k, v) => setForm((f) => ({ ...f, partners: f.partners.map((p, idx) => (idx === i ? { ...p, [k]: v } : p)) }));
   const addPartner = () => setForm((f) => ({ ...f, partners: [...f.partners, { name: "", logoUrl: "", url: "" }] }));
   const removePartner = async (i) => (await confirmRemove(`partner “${form.partners[i]?.name || i + 1}”`)) && setForm((f) => ({ ...f, partners: f.partners.filter((_, idx) => idx !== i) }));
+  const setNav = (i, key, value) => setForm((f) => ({ ...f, navigation: f.navigation.map((item, index) => index === i ? { ...item, [key]: value } : item) }));
+  const addNav = () => setForm((f) => ({ ...f, navigation: [...f.navigation, { label: "", labelNe: "", url: "", external: false, children: [] }] }));
+  const removeNav = async (i) => (await confirmRemove(`navigation item “${form.navigation[i]?.label || i + 1}”`)) && setForm((f) => ({ ...f, navigation: f.navigation.filter((_, index) => index !== i) }));
+  const moveNav = (i, direction) => setForm((f) => {
+    const target = i + direction; if (target < 0 || target >= f.navigation.length) return f;
+    const navigation = [...f.navigation]; [navigation[i], navigation[target]] = [navigation[target], navigation[i]];
+    return { ...f, navigation };
+  });
+  const addChild = (i) => setForm((f) => ({ ...f, navigation: f.navigation.map((item, index) => index === i ? { ...item, children: [...item.children, { label: "", labelNe: "", url: "", external: false }] } : item) }));
+  const setChild = (i, j, key, value) => setForm((f) => ({ ...f, navigation: f.navigation.map((item, index) => index === i ? { ...item, children: item.children.map((child, childIndex) => childIndex === j ? { ...child, [key]: value } : child) } : item) }));
+  const removeChild = async (i, j) => (await confirmRemove(`submenu item “${form.navigation[i]?.children[j]?.label || j + 1}”`)) && setForm((f) => ({ ...f, navigation: f.navigation.map((item, index) => index === i ? { ...item, children: item.children.filter((_, childIndex) => childIndex !== j) } : item) }));
+  const moveChild = (i, j, direction) => setForm((f) => ({ ...f, navigation: f.navigation.map((item, index) => {
+    if (index !== i) return item; const target = j + direction; if (target < 0 || target >= item.children.length) return item;
+    const children = [...item.children]; [children[j], children[target]] = [children[target], children[j]]; return { ...item, children };
+  }) }));
   const setContact = (k, v) => setForm((f) => ({ ...f, contact: { ...f.contact, [k]: v } }));
   const setStat = (i, k, v) => setForm((f) => ({ ...f, stats: f.stats.map((s, idx) => (idx === i ? { ...s, [k]: v } : s)) }));
   const addStat = () => setForm((f) => ({ ...f, stats: [...f.stats, { value: 0, suffix: "+", label: "", labelNe: "" }] }));
@@ -108,7 +184,105 @@ export function ManageSettings() {
         <Button style={{ marginTop: 14 }} $variant="ghost" onClick={logoutEverywhere}>Log out all devices</Button>
       </Card>
 
-      <Card $pad={6} style={{ marginBottom: 20 }}>
+      <Card id="branding" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
+        <h3>Header &amp; branding</h3>
+        <Muted>These details appear in the public site header. School name and tagline support bold, italic, underline, colour, font family and font size.</Muted>
+        <SocialGrid>
+          <Field style={{ gridColumn: "1 / -1" }}>
+            <Label>School logo</Label>
+            <ImageUploader value={form.branding.logoUrl} onUploaded={(url) => setBranding("logoUrl", url)} label="Upload school logo" />
+          </Field>
+          <Field>
+            <Label>Logo height: {form.branding.logoHeight}px</Label>
+            <Input type="range" min="40" max="96" step="1" value={form.branding.logoHeight}
+              onChange={(e) => setBranding("logoHeight", Number(e.target.value))} />
+          </Field>
+          <InlineCheck>
+            <input type="checkbox" checked={form.branding.showLogoRing}
+              onChange={(e) => setBranding("showLogoRing", e.target.checked)} />
+            Show circular background behind logo
+          </InlineCheck>
+          <Field style={{ gridColumn: "1 / -1" }}><Label>School name (English)</Label>
+            <RichTextEditor value={form.branding.schoolName} onChange={(html) => setBranding("schoolName", html)} placeholder="Adarsha Rastriya Secondary School" />
+          </Field>
+          <Field style={{ gridColumn: "1 / -1" }}><Label>School name (Nepali)</Label>
+            <RichTextEditor value={form.branding.schoolNameNe} onChange={(html) => setBranding("schoolNameNe", html)} placeholder="विद्यालयको नेपाली नाम" />
+          </Field>
+          <Field style={{ gridColumn: "1 / -1" }}><Label>Tagline (English)</Label>
+            <RichTextEditor value={form.branding.tagline} onChange={(html) => setBranding("tagline", html)} placeholder="Lalgadh, Dhanusha · Est. 2029 BS" />
+          </Field>
+          <Field style={{ gridColumn: "1 / -1" }}><Label>Tagline (Nepali)</Label>
+            <RichTextEditor value={form.branding.taglineNe} onChange={(html) => setBranding("taglineNe", html)} placeholder="लालगढ, धनुषा" />
+          </Field>
+        </SocialGrid>
+      </Card>
+
+      <Card id="principal" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
+        <h3>🎓 Message from the Principal</h3>
+        <Muted>Shown on the home and About pages. Add the photo, name, role and message — in English and Nepali.</Muted>
+        <SocialGrid>
+          <Field><Label>Name (English)</Label><Input value={form.principal.name} onChange={(e) => setPrincipal("name", e.target.value)} /></Field>
+          <Field><Label>Name (Nepali)</Label><Input value={form.principal.nameNe} onChange={(e) => setPrincipal("nameNe", e.target.value)} /></Field>
+          <Field><Label>Role (English)</Label><Input value={form.principal.role} onChange={(e) => setPrincipal("role", e.target.value)} placeholder="Principal" /></Field>
+          <Field><Label>Role (Nepali)</Label><Input value={form.principal.roleNe} onChange={(e) => setPrincipal("roleNe", e.target.value)} placeholder="प्रधानाध्यापक" /></Field>
+          <Field style={{ gridColumn: "1 / -1" }}>
+            <Label>Message (English)</Label>
+            <RichTextEditor value={form.principal.message} onChange={(html) => setPrincipal("message", html)} placeholder="Write the principal's message in English…" />
+          </Field>
+          <Field style={{ gridColumn: "1 / -1" }}>
+            <Label>Message (Nepali)</Label>
+            <RichTextEditor value={form.principal.messageNe} onChange={(html) => setPrincipal("messageNe", html)} placeholder="नेपालीमा प्रधानाध्यापकको सन्देश लेख्नुहोस्…" />
+          </Field>
+          <Field style={{ gridColumn: "1 / -1" }}>
+            <Label>Photo</Label>
+            <ImageUploader value={form.principal.photoUrl} onUploaded={(url) => setPrincipal("photoUrl", url)} label="Upload principal photo" />
+          </Field>
+        </SocialGrid>
+      </Card>
+
+      <Card id="navigation" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
+        <SpaceBetween>
+          <div><h3>Navigation menu</h3><Muted>Choose any built-in page or any old/new page created in the Pages manager.</Muted></div>
+          <NavHeaderActions><Button as={Link} to="/admin/pages" $variant="ghost" $size="sm">Create / edit pages</Button><Button $variant="outline" $size="sm" onClick={addNav}><Plus size={16} /> Add menu item</Button></NavHeaderActions>
+        </SpaceBetween>
+        {form.navigation.length === 0 && <Muted>No navigation items. Add one to begin building the public menu.</Muted>}
+        {form.navigation.map((item, i) => (
+          <BannerCard key={i}>
+            <BannerHead>
+              <strong>Menu item {i + 1}{item.children.length ? " · Dropdown" : ""}</strong>
+              <OrderActions>
+                <IconBtn onClick={() => moveNav(i, -1)} disabled={i === 0} aria-label="Move up"><ArrowUp size={15} /></IconBtn>
+                <IconBtn onClick={() => moveNav(i, 1)} disabled={i === form.navigation.length - 1} aria-label="Move down"><ArrowDown size={15} /></IconBtn>
+                <IconBtn $danger onClick={() => removeNav(i)} aria-label="Remove"><Trash2 size={16} /></IconBtn>
+              </OrderActions>
+            </BannerHead>
+            <BannerGrid>
+              <Field><Label>Label (English)</Label><Input value={item.label} onChange={(e) => setNav(i, "label", e.target.value)} /></Field>
+              <Field><Label>Label (Nepali)</Label><Input value={item.labelNe} onChange={(e) => setNav(i, "labelNe", e.target.value)} /></Field>
+              <Field style={{ gridColumn: "1 / -1" }}><Label>Link {item.children.length ? "(ignored while dropdown has children)" : ""}</Label><DestinationPicker destinations={[...BUILTIN_DESTINATIONS, ...pageDestinations]} value={item.url} onChange={(value) => setNav(i, "url", value)} /></Field>
+              <InlineCheck><input type="checkbox" checked={item.external} onChange={(e) => setNav(i, "external", e.target.checked)} /> Open in a new tab</InlineCheck>
+            </BannerGrid>
+            {item.children.map((child, j) => (
+              <ChildCard key={j}>
+                <ChildHead><strong><CornerDownRight size={15} /> Sub-item {j + 1}</strong><OrderActions>
+                  <IconBtn onClick={() => moveChild(i, j, -1)} disabled={j === 0} aria-label="Move sub-item up"><ArrowUp size={14} /></IconBtn>
+                  <IconBtn onClick={() => moveChild(i, j, 1)} disabled={j === item.children.length - 1} aria-label="Move sub-item down"><ArrowDown size={14} /></IconBtn>
+                  <IconBtn $danger onClick={() => removeChild(i, j)} aria-label="Remove sub-item"><Trash2 size={14} /></IconBtn>
+                </OrderActions></ChildHead>
+                <BannerGrid>
+                  <Field><Label>Label (English)</Label><Input value={child.label} onChange={(e) => setChild(i, j, "label", e.target.value)} /></Field>
+                  <Field><Label>Label (Nepali)</Label><Input value={child.labelNe} onChange={(e) => setChild(i, j, "labelNe", e.target.value)} /></Field>
+                  <Field style={{ gridColumn: "1 / -1" }}><Label>Link</Label><DestinationPicker destinations={[...BUILTIN_DESTINATIONS, ...pageDestinations]} value={child.url} onChange={(value) => setChild(i, j, "url", value)} /></Field>
+                  <InlineCheck><input type="checkbox" checked={child.external} onChange={(e) => setChild(i, j, "external", e.target.checked)} /> Open in a new tab</InlineCheck>
+                </BannerGrid>
+              </ChildCard>
+            ))}
+            <Button $variant="ghost" $size="sm" onClick={() => addChild(i)}><Plus size={15} /> Add dropdown item</Button>
+          </BannerCard>
+        ))}
+      </Card>
+
+      <Card id="announcement" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
         <ToggleRow>
           <div>
             <h3>📢 Announcement bar</h3>
@@ -125,7 +299,7 @@ export function ManageSettings() {
         </SocialGrid>
       </Card>
 
-      <Card $pad={6} style={{ marginBottom: 20 }}>
+      <Card id="partners" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
         <SpaceBetween>
           <div><h3>Affiliations & partners</h3><Muted>Logos shown in the “Affiliations & Partners” strip on the home page.</Muted></div>
           <Button $variant="outline" $size="sm" onClick={addPartner}><Plus size={16} /> Add partner</Button>
@@ -148,7 +322,7 @@ export function ManageSettings() {
         ))}
       </Card>
 
-      <Card $pad={6} style={{ marginBottom: 20 }}>
+      <Card id="contact" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
         <h3>Contact information</h3>
         <Muted>Shown in the header bar, footer, and Contact page.</Muted>
         <SocialGrid>
@@ -166,7 +340,7 @@ export function ManageSettings() {
         </SocialGrid>
       </Card>
 
-      <Card $pad={6} style={{ marginBottom: 20 }}>
+      <Card id="stats" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
         <SpaceBetween>
           <div><h3>Home “at a glance” stats</h3><Muted>The count-up numbers on the home page and hero.</Muted></div>
           <Button $variant="outline" $size="sm" onClick={addStat}><Plus size={16} /> Add stat</Button>
@@ -184,7 +358,7 @@ export function ManageSettings() {
         ))}
       </Card>
 
-      <Card $pad={6} style={{ marginBottom: 20 }}>
+      <Card id="facilities" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
         <SpaceBetween>
           <div><h3>Facilities (About page)</h3><Muted>The facility cards shown on the About page.</Muted></div>
           <Button $variant="outline" $size="sm" onClick={addFacility}><Plus size={16} /> Add facility</Button>
@@ -209,7 +383,7 @@ export function ManageSettings() {
         ))}
       </Card>
 
-      <Card $pad={6} style={{ marginBottom: 20 }}>
+      <Card id="socials" $pad={6} style={{ marginBottom: 20, scrollMarginTop: 84 }}>
         <h3>Social media links</h3>
         <Muted>Only links you fill in will appear in the site footer.</Muted>
         <SocialGrid>
@@ -234,7 +408,7 @@ export function ManageSettings() {
         </ToggleRow>
       </Card>
 
-      <Card $pad={6}>
+      <Card id="banners" $pad={6} style={{ scrollMarginTop: 84 }}>
         <SpaceBetween>
           <div><h3>Hero banners</h3><Muted>Slides shown in the animated banner on the Home page.</Muted></div>
           <Button $variant="outline" $size="sm" onClick={addBanner}><Plus size={16} /> Add banner</Button>
@@ -344,5 +518,11 @@ const IconBtn = styled.button`
   color: ${({ theme, $danger }) => ($danger ? theme.colors.danger : theme.colors.secondary)};
   background: ${({ theme, $danger }) => ($danger ? theme.colors.dangerSoft : theme.colors.secondarySoft)};
 `;
+const OrderActions = styled.div`display: flex; align-items: center; gap: 5px;`;
+const ChildCard = styled.div`border-left: 3px solid ${({ theme }) => theme.colors.secondary}; background: ${({ theme }) => theme.colors.surfaceAlt}; border-radius: ${({ theme }) => theme.radii.md}; padding: ${({ theme }) => theme.space[3]};`;
+const ChildHead = styled.div`display: flex; align-items: center; justify-content: space-between; margin-bottom: ${({ theme }) => theme.space[3]}; strong { display: inline-flex; align-items: center; gap: 6px; }`;
+const InlineCheck = styled.label`display: inline-flex; align-items: center; gap: 8px; color: ${({ theme }) => theme.colors.textBody}; font-size: ${({ theme }) => theme.fontSizes.sm}; input { accent-color: ${({ theme }) => theme.colors.primary}; }`;
+const DestinationGrid = styled.div`display: grid; grid-template-columns: minmax(180px, 0.8fr) minmax(220px, 1.2fr); gap: ${({ theme }) => theme.space[2]}; ${({ theme }) => theme.media.mobile(`grid-template-columns: 1fr;`)}`;
+const NavHeaderActions = styled.div`display: flex; gap: ${({ theme }) => theme.space[2]}; flex-wrap: wrap; justify-content: flex-end;`;
 
 export default ManageSettings;

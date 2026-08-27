@@ -20,6 +20,30 @@ const bannerSchema = new Schema(
   { _id: false }
 );
 
+const navigationChildSchema = new Schema(
+  { label: { type: String, default: "" }, labelNe: { type: String, default: "" }, url: { type: String, default: "" }, external: { type: Boolean, default: false } },
+  { _id: false }
+);
+const navigationItemSchema = new Schema(
+  {
+    label: { type: String, default: "" }, labelNe: { type: String, default: "" }, url: { type: String, default: "" }, external: { type: Boolean, default: false },
+    children: { type: [navigationChildSchema], default: [] },
+  },
+  { _id: false }
+);
+const brandingSchema = new Schema(
+  {
+    logoUrl: { type: String, default: "" },
+    logoHeight: { type: Number, default: 64, min: 40, max: 96 },
+    showLogoRing: { type: Boolean, default: false },
+    schoolName: { type: String, default: "" },
+    schoolNameNe: { type: String, default: "" },
+    tagline: { type: String, default: "" },
+    taglineNe: { type: String, default: "" },
+  },
+  { _id: false }
+);
+
 const settingsSchema = new Schema(
   {
     key: { type: String, default: "main", unique: true },
@@ -35,12 +59,28 @@ const settingsSchema = new Schema(
     donationEnabled: { type: Boolean, default: false },
     // Hero background image/video opacity (0–1). Admin-controlled; 1 = fully clear.
     heroOpacity: { type: Number, default: 1, min: 0, max: 1 },
+
+    branding: { type: brandingSchema, default: () => ({}) },
+
+    // "Message from the Principal" shown on the home and About pages (admin-editable).
+    principal: {
+      name: { type: String, default: "" },
+      nameNe: { type: String, default: "" },
+      role: { type: String, default: "" },
+      roleNe: { type: String, default: "" },
+      photoUrl: { type: String, default: "" },
+      message: { type: String, default: "" },
+      messageNe: { type: String, default: "" },
+    },
+
     banners: { type: [bannerSchema], default: [] },
 
     // Full-screen interstitial ad / popup shown to public visitors. Admin can
     // set a poster image and/or text, an optional CTA, and how often it shows.
     interstitial: {
       enabled: { type: Boolean, default: false },
+      // Legacy single-slide fields (kept for backward compatibility). When
+      // `slides` is non-empty the carousel uses that instead.
       imageUrl: { type: String, default: "" },
       videoUrl: { type: String, default: "" },
       title: { type: String, default: "" },
@@ -50,6 +90,27 @@ const settingsSchema = new Schema(
       ctaLabel: { type: String, default: "" },
       ctaLabelNe: { type: String, default: "" },
       ctaLink: { type: String, default: "" },
+      // Multi-slide swipeable carousel. Each slide has its own media + text + CTA.
+      slides: {
+        type: [
+          new Schema(
+            {
+              imageUrl: { type: String, default: "" },
+              videoUrl: { type: String, default: "" },
+              title: { type: String, default: "" },
+              titleNe: { type: String, default: "" },
+              body: { type: String, default: "" },
+              bodyNe: { type: String, default: "" },
+              ctaLabel: { type: String, default: "" },
+              ctaLabelNe: { type: String, default: "" },
+              ctaLink: { type: String, default: "" },
+            },
+            { _id: false }
+          ),
+        ],
+        default: [],
+      },
+      autoAdvance: { type: Boolean, default: true },
       frequency: {
         type: String,
         enum: ["session", "daily", "always"],
@@ -125,6 +186,7 @@ const settingsSchema = new Schema(
       ],
       default: [],
     },
+    navigation: { type: [navigationItemSchema], default: [] },
   },
   { timestamps: true }
 );

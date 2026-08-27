@@ -53,11 +53,35 @@ async function request(path, { method = "GET", body, headers, signal } = {}) {
   csrfToken = res.headers.get("x-csrf-token") || data?.csrfToken || csrfToken;
 
   if (!res.ok) {
-    const message =
+    let message =
       (data && (data.message || data.error)) || `Request failed (${res.status})`;
+    const detail = data?.details && Object.values(data.details).flat(Infinity).find((item) => typeof item === "string");
+    if (message === "Validation failed" && detail) message = `${message}: ${detail}`;
     throw new ApiError(message, res.status, data?.details);
   }
   return data;
+}
+
+function upload(path, body, { onProgress, signal } = {}) {
+  return new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest();
+    xhr.open("POST", `${BASE_URL}${path}`);
+    xhr.withCredentials = true;
+    if (csrfToken) xhr.setRequestHeader("X-CSRF-Token", csrfToken);
+    xhr.upload.addEventListener("progress", (event) => {
+      if (event.lengthComputable) onProgress?.(Math.round((event.loaded / event.total) * 100));
+    });
+    xhr.addEventListener("load", () => {
+      const data = xhr.responseText ? safeParse(xhr.responseText) : null;
+      csrfToken = xhr.getResponseHeader("x-csrf-token") || data?.csrfToken || csrfToken;
+      if (xhr.status >= 200 && xhr.status < 300) resolve(data);
+      else reject(new ApiError(data?.message || data?.error || `Request failed (${xhr.status})`, xhr.status, data?.details));
+    });
+    xhr.addEventListener("error", () => reject(new ApiError("Network error — is the server running?", 0)));
+    xhr.addEventListener("abort", () => reject(new DOMException("Upload cancelled", "AbortError")));
+    signal?.addEventListener("abort", () => xhr.abort(), { once: true });
+    xhr.send(body);
+  });
 }
 
 function safeParse(text) {
@@ -80,6 +104,7 @@ export const api = {
   raw: request,
   get: (path, params, opts) => request(`${path}${qs(params)}`, opts),
   post: (path, body, opts) => request(path, { ...opts, method: "POST", body }),
+  upload,
   put: (path, body, opts) => request(path, { ...opts, method: "PUT", body }),
   patch: (path, body, opts) => request(path, { ...opts, method: "PATCH", body }),
   del: (path, opts) => request(path, { ...opts, method: "DELETE" }),

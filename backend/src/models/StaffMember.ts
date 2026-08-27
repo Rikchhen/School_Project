@@ -20,6 +20,7 @@ const staffMemberSchema = new Schema(
       index: true,
     },
     bio: { type: String, default: "" },
+    bioNe: { type: String, default: "" },
     email: { type: String, default: "", lowercase: true, trim: true },
     phone: { type: String, default: "" },
     photoUrl: { type: String, default: "" },

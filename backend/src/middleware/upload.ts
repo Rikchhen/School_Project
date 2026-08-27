@@ -8,8 +8,11 @@ import { env, isTest } from "../config/env";
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-export const UPLOAD_DIR = path.resolve(process.cwd(), "uploads");
-export const PRIVATE_DONATION_DIR = path.resolve(process.cwd(), "private-uploads", "donations");
+// Root for all uploaded files. In production point UPLOAD_ROOT at a persistent
+// disk so uploads survive restarts/redeploys; otherwise files live beside the app.
+const UPLOAD_ROOT = env.UPLOAD_ROOT ? path.resolve(env.UPLOAD_ROOT) : process.cwd();
+export const UPLOAD_DIR = path.resolve(UPLOAD_ROOT, "uploads");
+export const PRIVATE_DONATION_DIR = path.resolve(UPLOAD_ROOT, "private-uploads", "donations");
 
 // Ensure the uploads directory exists at startup.
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });

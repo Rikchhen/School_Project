@@ -1,5 +1,5 @@
 import type { NextFunction, Request, RequestHandler, Response } from "express";
-import { env } from "../config/env";
+import { adminAuthDisabled, env } from "../config/env";
 import { ApiError } from "../utils/ApiError";
 import { verifyToken } from "../utils/jwt";
 
@@ -8,6 +8,10 @@ import { verifyToken } from "../utils/jwt";
  * to `req.admin`.
  */
 export const protect: RequestHandler = async (req: Request, _res: Response, next: NextFunction) => {
+  if (adminAuthDisabled) {
+    req.admin = { id: "000000000000000000000000", role: "admin", sid: "000000000000000000000000", version: 0 };
+    return next();
+  }
   const token = req.cookies?.[env.COOKIE_NAME];
   if (!token) return next(ApiError.unauthorized("Authentication required"));
 

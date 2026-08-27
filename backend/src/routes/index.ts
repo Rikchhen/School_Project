@@ -11,6 +11,7 @@ import committeeRoutes from "./committeeRoutes";
 import programRoutes from "./programRoutes";
 import settingsRoutes from "./settingsRoutes";
 import securityRoutes from "./securityRoutes";
+import syllabusRoutes from "./syllabusRoutes";
 
 const router = Router();
 
@@ -29,6 +30,7 @@ router.use("/committee", committeeRoutes);
 router.use("/programs", programRoutes);
 router.use("/settings", settingsRoutes);
 router.use("/security", securityRoutes);
+router.use("/syllabus", syllabusRoutes);
 router.use("/uploads-file", uploadRoutes);
 
 export default router;

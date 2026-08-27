@@ -5,6 +5,7 @@ const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [admin, setAdmin] = useState(null);
+  const [authDisabled, setAuthDisabled] = useState(false);
   const [loading, setLoading] = useState(true);
 
   // On mount, check for an existing session via the httpOnly cookie.
@@ -13,7 +14,10 @@ export function AuthProvider({ children }) {
     (async () => {
       try {
         const res = await api.get("/auth/me");
-        if (active) setAdmin(res.admin);
+        if (active) {
+          setAdmin(res.admin);
+          setAuthDisabled(!!res.authDisabled);
+        }
       } catch {
         if (active) setAdmin(null);
       } finally {
@@ -33,16 +37,17 @@ export function AuthProvider({ children }) {
   }, []);
 
   const logout = useCallback(async () => {
+    if (authDisabled) return;
     try {
       await api.post("/auth/logout");
     } finally {
       setAdmin(null);
     }
-  }, []);
+  }, [authDisabled]);
 
   const value = useMemo(
-    () => ({ admin, loading, isAuthenticated: !!admin, login, logout }),
-    [admin, loading, login, logout]
+    () => ({ admin, loading, isAuthenticated: !!admin, authDisabled, login, logout }),
+    [admin, loading, authDisabled, login, logout]
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

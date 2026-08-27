@@ -14,8 +14,15 @@ const ALLOWED_TAGS = new Set([
 
 const ALLOWED_STYLE_PROPS = new Set([
   "font-family", "font-weight", "font-style", "text-decoration",
-  "text-align", "color",
+  "text-align", "color", "font-size",
 ]);
+
+function isSafeFontSize(value) {
+  const size = value.trim().toLowerCase();
+  if (/^(xx-small|x-small|small|medium|large|x-large|xx-large|smaller|larger)$/.test(size)) return true;
+  const match = size.match(/^(\d+(?:\.\d+)?|\.\d+)(px|em|rem)$/);
+  return Boolean(match && Number(match[1]) > 0);
+}
 
 function isSafeUrl(url) {
   const u = (url || "").trim().toLowerCase();
@@ -28,8 +35,12 @@ function filterStyle(style) {
     .map((s) => s.trim())
     .filter(Boolean)
     .filter((rule) => {
-      const prop = rule.split(":")[0].trim().toLowerCase();
-      return ALLOWED_STYLE_PROPS.has(prop) && !/expression|url\s*\(/i.test(rule);
+      const separator = rule.indexOf(":");
+      if (separator < 1) return false;
+      const prop = rule.slice(0, separator).trim().toLowerCase();
+      const value = rule.slice(separator + 1).trim();
+      return ALLOWED_STYLE_PROPS.has(prop) && !/expression|url\s*\(/i.test(rule)
+        && (prop !== "font-size" || isSafeFontSize(value));
     })
     .join("; ");
 }
@@ -71,11 +82,25 @@ function cleanNode(node) {
   });
 }
 
+// Older plain-text fields could save editor markup as escaped text
+// (`&lt;strong&gt;...`). Decode only when it resembles escaped HTML. The
+// result still passes through the strict allowlist before being rendered.
+function decodeLegacyEscapedHtml(value) {
+  let decoded = value;
+  for (let i = 0; i < 2 && /(?:&lt;|&#0*60;|&#x0*3c;)[^&]*(?:&gt;|&#0*62;|&#x0*3e;)/i.test(decoded); i += 1) {
+    const textarea = document.createElement("textarea");
+    textarea.innerHTML = decoded;
+    decoded = textarea.value;
+  }
+  return decoded;
+}
+
 /** Return a sanitized HTML string safe to inject into the DOM. */
 export function sanitizeHtml(dirty) {
   if (!dirty || typeof dirty !== "string") return "";
   if (typeof window === "undefined" || !window.DOMParser) return "";
-  const doc = new DOMParser().parseFromString(`<div>${dirty}</div>`, "text/html");
+  const normalized = decodeLegacyEscapedHtml(dirty);
+  const doc = new DOMParser().parseFromString(`<div>${normalized}</div>`, "text/html");
   const root = doc.body.firstChild;
   if (!root) return "";
   cleanNode(root);

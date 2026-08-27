@@ -1,6 +1,8 @@
-import styled from "styled-components";
+import styled, { css, keyframes } from "styled-components";
 
-const fieldStyles = ({ theme }) => `
+const fieldShake = keyframes`0%,100%{transform:translateX(0)}30%{transform:translateX(-4px)}60%{transform:translateX(4px)}`;
+
+const fieldStyles = ({ theme }) => css`
   width: 100%;
   font-family: ${theme.fonts.body};
   font-size: ${theme.fontSizes.md};
@@ -19,6 +21,8 @@ const fieldStyles = ({ theme }) => `
   }
   &:disabled { background: ${theme.colors.surfaceAlt}; cursor: not-allowed; }
   &[aria-invalid="true"] { border-color: ${theme.colors.danger}; }
+  &[aria-invalid="true"]:not(:focus) { animation: ${fieldShake} 0.28s ease-out both; }
+  @media (prefers-reduced-motion: reduce) { animation: none !important; }
 `;
 
 export const Input = styled.input`

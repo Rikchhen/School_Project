@@ -18,6 +18,17 @@ import { PageModel } from "../models/Page";
 import { CommitteeMemberModel } from "../models/CommitteeMember";
 import { ProgramModel } from "../models/Program";
 import { SettingsModel } from "../models/Settings";
+import { SyllabusModel } from "../models/Syllabus";
+
+async function seedSyllabi() {
+  await SyllabusModel.deleteMany({});
+  await SyllabusModel.insertMany([
+    { title: "Class 12 Physics Syllabus", titleNe: "कक्षा १२ भौतिक विज्ञान पाठ्यक्रम", grade: "Class 12", subject: "Physics", stream: "science", academicYear: "2082", featured: true, published: true, order: 1, description: "Course outline for Class 12 Physics." },
+    { title: "Class 12 Accountancy Syllabus", titleNe: "कक्षा १२ लेखाशास्त्र पाठ्यक्रम", grade: "Class 12", subject: "Accountancy", stream: "management", academicYear: "2082", published: true, order: 2, description: "Course outline for Class 12 Accountancy." },
+    { title: "Class 10 General Science Syllabus", titleNe: "कक्षा १० सामान्य विज्ञान पाठ्यक्रम", grade: "Class 10", subject: "Science", stream: "general", academicYear: "2082", published: true, order: 3, description: "SEE-aligned general science course outline." },
+  ]);
+  console.log("✅ Seeded syllabi");
+}
 
 async function seedAdmin() {
   const existing = await AdminModel.findOne({ email: env.SEED_ADMIN_EMAIL });
@@ -339,6 +350,10 @@ async function seedSettings() {
         whatsapp: "",
       },
       donationEnabled: true,
+      branding: {
+        logoUrl: "", logoHeight: 64, showLogoRing: false,
+        schoolName: "", schoolNameNe: "", tagline: "", taglineNe: "",
+      },
       announcement: {
         enabled: true,
         text: "Admissions open for the 2081/82 session — apply today!",
@@ -353,6 +368,25 @@ async function seedSettings() {
         { name: "CTEVT", logoUrl: "", url: "" },
         { name: "Tribhuvan University", logoUrl: "", url: "" },
         { name: "Mithila Municipality", logoUrl: "", url: "" },
+      ],
+      navigation: [
+        { label: "Home", labelNe: "गृह", url: "/", external: false, children: [] },
+        { label: "About", labelNe: "हाम्रो बारेमा", url: "", external: false, children: [
+          { label: "About", labelNe: "हाम्रो बारेमा", url: "/about", external: false },
+          { label: "Committee", labelNe: "समिति", url: "/committee", external: false },
+          { label: "Faculty", labelNe: "शिक्षक", url: "/faculty", external: false },
+        ] },
+        { label: "Academic", labelNe: "शैक्षिक", url: "", external: false, children: [
+          { label: "Academic", labelNe: "शैक्षिक", url: "/academic", external: false },
+          { label: "Syllabus", labelNe: "पाठ्यक्रम", url: "/syllabus", external: false },
+        ] },
+        { label: "Admissions", labelNe: "भर्ना", url: "/admissions", external: false, children: [] },
+        { label: "Media", labelNe: "मिडिया", url: "", external: false, children: [
+          { label: "Gallery", labelNe: "ग्यालरी", url: "/gallery", external: false },
+          { label: "Notice Board", labelNe: "सूचना पाटी", url: "/notices", external: false },
+          { label: "News & Events", labelNe: "खबर र कार्यक्रम", url: "/events", external: false },
+        ] },
+        { label: "Contact", labelNe: "सम्पर्क", url: "/contact", external: false, children: [] },
       ],
       banners: [
         {
@@ -396,6 +430,7 @@ async function run() {
   await seedPages();
   await seedCommittee();
   await seedPrograms();
+  await seedSyllabi();
   await seedSettings();
   await disconnectDB();
   console.log("🌱 Seeding complete.");
