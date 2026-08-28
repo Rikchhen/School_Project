@@ -1,5 +1,5 @@
 import type { CookieOptions, Request, Response } from "express";
-import { AdminModel } from "../models/Admin";
+import { AdminModel, hashPassword } from "../models/Admin";
 import { ApiError } from "../utils/ApiError";
 import { asyncHandler } from "../utils/asyncHandler";
 import { signToken } from "../utils/jwt";
@@ -114,4 +114,19 @@ export const disableTwoFactor = asyncHandler(async (req: Request, res: Response)
   admin.twoFactorEnabled = false; admin.twoFactorSecret = ""; admin.twoFactorPendingSecret = ""; admin.recoveryCodeHashes = []; admin.tokenVersion += 1; await admin.save();
   await AdminSessionModel.updateMany({ adminId: admin._id }, { revokedAt: new Date() });
   await writeAudit(req, "auth.2fa_disabled", 200); res.json({ success: true });
+});
+
+export const changePassword = asyncHandler(async (req: Request, res: Response) => {
+  const { currentPassword, newPassword } = (req.validated?.body ?? req.body) as {
+    currentPassword: string;
+    newPassword: string;
+  };
+  const admin = await AdminModel.findById(req.admin!.id).select("+passwordHash");
+  if (!admin || !(await admin.comparePassword(currentPassword))) {
+    throw ApiError.unauthorized("Current password is incorrect");
+  }
+  admin.passwordHash = await hashPassword(newPassword);
+  await admin.save();
+  await writeAudit(req, "auth.change_password", 200);
+  res.json({ success: true, message: "Password updated" });
 });

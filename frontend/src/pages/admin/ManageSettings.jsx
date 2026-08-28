@@ -61,6 +61,20 @@ export function ManageSettings() {
   const [recoveryCodes, setRecoveryCodes] = useState([]);
   const [disablePassword, setDisablePassword] = useState("");
   const [pageDestinations, setPageDestinations] = useState([]);
+  const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
+  const [pwSaving, setPwSaving] = useState(false);
+
+  const changePassword = async () => {
+    if (pw.newPassword.length < 8) return toast.error("New password must be at least 8 characters");
+    if (pw.newPassword !== pw.confirmPassword) return toast.error("New passwords do not match");
+    setPwSaving(true);
+    try {
+      await api.post("/auth/change-password", { currentPassword: pw.currentPassword, newPassword: pw.newPassword });
+      setPw({ currentPassword: "", newPassword: "", confirmPassword: "" });
+      toast.success("Password updated successfully");
+    } catch (e) { toast.error(e.message || "Could not change password"); }
+    finally { setPwSaving(false); }
+  };
 
   const startTwoFactor = async () => { try { setTwoFactorSetup(await api.post("/auth/2fa/setup")); } catch (e) { toast.error(e.message); } };
   const confirmTwoFactor = async () => { try { const r = await api.post("/auth/2fa/confirm", { code: twoFactorCode }); setRecoveryCodes(r.recoveryCodes); setTwoFactorSetup(null); toast.success("Two-factor authentication enabled"); } catch (e) { toast.error(e.message); } };
@@ -173,6 +187,18 @@ export function ManageSettings() {
       <Card $pad={6} style={{ marginBottom: 20 }}>
         <h3><ShieldCheck size={18} /> Account security</h3>
         <Muted>Protect this administrator account with an authenticator app and revoke active sessions.</Muted>
+
+        <div style={{ marginTop: 16, paddingTop: 16, borderTop: "1px solid #e5e7eb" }}>
+          <strong style={{ display: "block", marginBottom: 4 }}>Change password</strong>
+          <Muted>Update the password you use to sign in to the admin panel.</Muted>
+          <SocialGrid style={{ marginTop: 12 }}>
+            <Field style={{ gridColumn: "1 / -1" }}><Label>Current password</Label><Input type="password" autoComplete="current-password" value={pw.currentPassword} onChange={(e) => setPw((p) => ({ ...p, currentPassword: e.target.value }))} /></Field>
+            <Field><Label>New password</Label><Input type="password" autoComplete="new-password" value={pw.newPassword} onChange={(e) => setPw((p) => ({ ...p, newPassword: e.target.value }))} /></Field>
+            <Field><Label>Confirm new password</Label><Input type="password" autoComplete="new-password" value={pw.confirmPassword} onChange={(e) => setPw((p) => ({ ...p, confirmPassword: e.target.value }))} /></Field>
+          </SocialGrid>
+          <Button style={{ marginTop: 12 }} $variant="primary" onClick={changePassword} disabled={pwSaving || !pw.currentPassword || !pw.newPassword}>{pwSaving ? "Updating…" : "Update password"}</Button>
+        </div>
+
         {!admin?.twoFactorEnabled && !twoFactorSetup && <Button style={{ marginTop: 14 }} $variant="outline" onClick={startTwoFactor}>Set up two-factor authentication</Button>}
         {twoFactorSetup && <SocialGrid>
           <Field style={{ gridColumn: "1 / -1" }}><Label>Authenticator secret</Label><Input readOnly value={twoFactorSetup.secret} /><Muted>Add this secret to your authenticator app, then enter its six-digit code.</Muted></Field>

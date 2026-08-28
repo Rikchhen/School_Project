@@ -17,6 +17,12 @@ export const loginSchema = z.object({
 });
 export const twoFactorCodeSchema = z.object({ body: z.object({ code: z.string().regex(/^\d{6}$/) }) });
 export const disableTwoFactorSchema = z.object({ body: z.object({ password: z.string().min(1) }) });
+export const changePasswordSchema = z.object({
+  body: z.object({
+    currentPassword: z.string().min(1, "Current password is required"),
+    newPassword: z.string().min(8, "New password must be at least 8 characters"),
+  }),
+});
 
 /** ---------------- Notices ---------------- */
 export const createNoticeSchema = z.object({
