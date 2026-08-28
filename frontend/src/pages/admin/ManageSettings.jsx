@@ -7,6 +7,7 @@ import { useSettings } from "../../context/SettingsContext";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Field, Label, Input, Select, Textarea } from "../../components/ui/Input";
+import { PasswordInput } from "../../components/ui/PasswordInput";
 import { Skeleton } from "../../components/ui/Skeleton";
 import { ImageUploader } from "../../components/ImageUploader";
 import { MultiImageUploader } from "../../components/MultiImageUploader";
@@ -192,9 +193,9 @@ export function ManageSettings() {
           <strong style={{ display: "block", marginBottom: 4 }}>Change password</strong>
           <Muted>Update the password you use to sign in to the admin panel.</Muted>
           <SocialGrid style={{ marginTop: 12 }}>
-            <Field style={{ gridColumn: "1 / -1" }}><Label>Current password</Label><Input type="password" autoComplete="current-password" value={pw.currentPassword} onChange={(e) => setPw((p) => ({ ...p, currentPassword: e.target.value }))} /></Field>
-            <Field><Label>New password</Label><Input type="password" autoComplete="new-password" value={pw.newPassword} onChange={(e) => setPw((p) => ({ ...p, newPassword: e.target.value }))} /></Field>
-            <Field><Label>Confirm new password</Label><Input type="password" autoComplete="new-password" value={pw.confirmPassword} onChange={(e) => setPw((p) => ({ ...p, confirmPassword: e.target.value }))} /></Field>
+            <Field style={{ gridColumn: "1 / -1" }}><Label>Current password</Label><PasswordInput autoComplete="current-password" value={pw.currentPassword} onChange={(e) => setPw((p) => ({ ...p, currentPassword: e.target.value }))} /></Field>
+            <Field><Label>New password</Label><PasswordInput autoComplete="new-password" value={pw.newPassword} onChange={(e) => setPw((p) => ({ ...p, newPassword: e.target.value }))} /></Field>
+            <Field><Label>Confirm new password</Label><PasswordInput autoComplete="new-password" value={pw.confirmPassword} onChange={(e) => setPw((p) => ({ ...p, confirmPassword: e.target.value }))} /></Field>
           </SocialGrid>
           <Button style={{ marginTop: 12 }} $variant="primary" onClick={changePassword} disabled={pwSaving || !pw.currentPassword || !pw.newPassword}>{pwSaving ? "Updating…" : "Update password"}</Button>
         </div>
@@ -206,7 +207,7 @@ export function ManageSettings() {
           <Button $variant="primary" onClick={confirmTwoFactor}>Confirm and enable</Button>
         </SocialGrid>}
         {recoveryCodes.length > 0 && <RecoveryBox><strong>Save these one-use recovery codes now:</strong><code>{recoveryCodes.join("\n")}</code></RecoveryBox>}
-        {admin?.twoFactorEnabled && <SocialGrid><Field><Label>Current password</Label><Input type="password" value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} /></Field><Button $variant="outline" onClick={disableTwoFactor}>Disable two-factor authentication</Button></SocialGrid>}
+        {admin?.twoFactorEnabled && <SocialGrid><Field><Label>Current password</Label><PasswordInput value={disablePassword} onChange={(e) => setDisablePassword(e.target.value)} /></Field><Button $variant="outline" onClick={disableTwoFactor}>Disable two-factor authentication</Button></SocialGrid>}
         <Button style={{ marginTop: 14 }} $variant="ghost" onClick={logoutEverywhere}>Log out all devices</Button>
       </Card>
 

@@ -8,6 +8,7 @@ import { useToast } from "../../context/ToastContext";
 import { Card } from "../../components/ui/Card";
 import { Button } from "../../components/ui/Button";
 import { Field, Label, Input } from "../../components/ui/Input";
+import { PasswordInput } from "../../components/ui/PasswordInput";
 import logo from "../../assets/images/logo.png";
 
 export function AdminLogin() {
@@ -58,7 +59,7 @@ export function AdminLogin() {
         </Field>}
         <Field>
           <Label htmlFor="l-pass">{t("admin.password")}</Label>
-          <Input id="l-pass" type="password" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
+          <PasswordInput id="l-pass" required value={password} onChange={(e) => setPassword(e.target.value)} autoComplete="current-password" />
         </Field>
         <Button type="submit" $variant="primary" $size="lg" disabled={busy} $fullWidth>
           <LogIn size={18} /> {busy ? `${t("common.loading")}…` : t("admin.signIn")}
