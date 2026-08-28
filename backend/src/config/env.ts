@@ -33,6 +33,11 @@ const envSchema = z.object({
   DONOR_DOCUMENT_KEY: z.string().optional().default(""),
   CLAMAV_ENABLED: z.string().default("false").transform((v) => v === "true"),
   CLAMAV_COMMAND: z.string().default("clamdscan"),
+  // Optional Cloudinary media storage (for hosts without a persistent disk).
+  // Set all three to store uploads in Cloudinary instead of on local disk.
+  CLOUDINARY_CLOUD_NAME: z.string().optional().default(""),
+  CLOUDINARY_API_KEY: z.string().optional().default(""),
+  CLOUDINARY_API_SECRET: z.string().optional().default(""),
   // Temporary local-development convenience. Never honored in test/production.
   DISABLE_ADMIN_AUTH: z.string().default("true").transform((v) => v === "true"),
 
