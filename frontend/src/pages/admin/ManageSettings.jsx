@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import QRCode from "qrcode";
 import styled from "styled-components";
 import { Plus, Trash2, Save, Heart, ShieldCheck, ArrowUp, ArrowDown, CornerDownRight } from "lucide-react";
 import { api } from "../../lib/api";
@@ -58,8 +59,18 @@ export function ManageSettings() {
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
   const [twoFactorSetup, setTwoFactorSetup] = useState(null);
+  const [twoFactorQr, setTwoFactorQr] = useState("");
   const [twoFactorCode, setTwoFactorCode] = useState("");
   const [recoveryCodes, setRecoveryCodes] = useState([]);
+
+  // Turn the otpauth:// URL from setup into a scannable QR image (generated
+  // entirely in the browser, so the secret never leaves this page).
+  useEffect(() => {
+    if (!twoFactorSetup?.otpauthUrl) { setTwoFactorQr(""); return; }
+    QRCode.toDataURL(twoFactorSetup.otpauthUrl, { width: 200, margin: 1 })
+      .then(setTwoFactorQr)
+      .catch(() => setTwoFactorQr(""));
+  }, [twoFactorSetup]);
   const [disablePassword, setDisablePassword] = useState("");
   const [pageDestinations, setPageDestinations] = useState([]);
   const [pw, setPw] = useState({ currentPassword: "", newPassword: "", confirmPassword: "" });
@@ -202,7 +213,14 @@ export function ManageSettings() {
 
         {!admin?.twoFactorEnabled && !twoFactorSetup && <Button style={{ marginTop: 14 }} $variant="outline" onClick={startTwoFactor}>Set up two-factor authentication</Button>}
         {twoFactorSetup && <SocialGrid>
-          <Field style={{ gridColumn: "1 / -1" }}><Label>Authenticator secret</Label><Input readOnly value={twoFactorSetup.secret} /><Muted>Add this secret to your authenticator app, then enter its six-digit code.</Muted></Field>
+          {twoFactorQr && (
+            <Field style={{ gridColumn: "1 / -1", alignItems: "center", textAlign: "center" }}>
+              <Label>Scan this QR code with your authenticator app</Label>
+              <img src={twoFactorQr} alt="Two-factor authentication QR code" width={200} height={200} style={{ borderRadius: 12, border: "1px solid #e5e7eb", background: "#fff", padding: 8 }} />
+              <Muted>Google Authenticator, Authy, Microsoft Authenticator — scan, then enter the 6-digit code below.</Muted>
+            </Field>
+          )}
+          <Field style={{ gridColumn: "1 / -1" }}><Label>Or enter this secret manually</Label><Input readOnly value={twoFactorSetup.secret} /><Muted>Can't scan? Add this secret to your authenticator app, then enter its six-digit code.</Muted></Field>
           <Field><Label>Six-digit code</Label><Input inputMode="numeric" value={twoFactorCode} onChange={(e) => setTwoFactorCode(e.target.value)} /></Field>
           <Button $variant="primary" onClick={confirmTwoFactor}>Confirm and enable</Button>
         </SocialGrid>}
