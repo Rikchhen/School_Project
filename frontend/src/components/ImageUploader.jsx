@@ -4,19 +4,17 @@ import { UploadCloud, Loader2, CheckCircle2 } from "lucide-react";
 import { api } from "../lib/api";
 import { useToast } from "../context/ToastContext";
 import { SmartImage } from "./SmartImage";
-import { ImageCropper } from "./admin/ImageCropper";
 
 /**
  * Admin file uploader. Uploads to POST /api/uploads-file and calls
- * onUploaded(url) with the stored public URL. Accepts images and PDFs.
- * When an image is selected, a crop dialog opens before upload.
+ * onUploaded(url) with the stored public URL. Accepts images, videos and PDFs,
+ * and uploads the selected file directly.
  */
 export function ImageUploader({ value, onUploaded, accept = "image/*", label = "Upload file", required = false }) {
   const inputRef = useRef(null);
   const [uploading, setUploading] = useState(false);
   const [progress, setProgress] = useState(0);
   const [complete, setComplete] = useState(false);
-  const [cropFile, setCropFile] = useState(null); // image awaiting crop
   const toast = useToast();
 
   const upload = async (file) => {
@@ -42,12 +40,7 @@ export function ImageUploader({ value, onUploaded, accept = "image/*", label = "
 
   const handleFile = (file) => {
     if (!file) return;
-    // Images go through the cropper first; PDFs upload directly.
-    if (file.type && file.type.startsWith("image/")) {
-      setCropFile(file);
-    } else {
-      upload(file);
-    }
+    upload(file);
   };
 
   const isVideo = value && /\.(mp4|webm|ogg|mov)$/i.test(value);
@@ -78,14 +71,6 @@ export function ImageUploader({ value, onUploaded, accept = "image/*", label = "
         onChange={(e) => { handleFile(e.target.files?.[0]); e.target.value = ""; }}
       />
       {required && !value && <RequiredHint role="note">A file is required.</RequiredHint>}
-
-      {cropFile && (
-        <ImageCropper
-          file={cropFile}
-          onCancel={() => setCropFile(null)}
-          onCropped={(croppedFile) => { setCropFile(null); upload(croppedFile); }}
-        />
-      )}
 
       {value ? (
         isVideo ? (
